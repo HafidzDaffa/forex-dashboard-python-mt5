@@ -1,0 +1,1537 @@
+/* ===================================================================
+   BBMA & SMC Trading Signal Dashboard — Premium Dark Theme
+   =================================================================== */
+
+/* ---- CSS Variables / Design Tokens ---- */
+:root {
+    --bg-primary: #0a0e17;
+    --bg-secondary: #111827;
+    --bg-card: #1a1f2e;
+    --bg-card-hover: #1e2538;
+    --bg-table-header: #141928;
+    --bg-table-row-even: #12172380;
+    --bg-table-row-odd: #0d111b80;
+    --bg-nav: rgba(14, 18, 30, 0.92);
+
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-muted: #64748b;
+
+    --accent-blue: #3b82f6;
+    --accent-cyan: #22d3ee;
+    --accent-purple: #a78bfa;
+
+    --buy-color: #00e676;
+    --buy-bg: rgba(0, 230, 118, 0.12);
+    --buy-glow: 0 0 12px rgba(0, 230, 118, 0.4);
+
+    --sell-color: #ff5252;
+    --sell-bg: rgba(255, 82, 82, 0.12);
+    --sell-glow: 0 0 12px rgba(255, 82, 82, 0.4);
+
+    --diamond-color: #ffd740;
+    --diamond-bg: rgba(255, 215, 64, 0.15);
+    --diamond-glow: 0 0 18px rgba(255, 215, 64, 0.5);
+
+    --neutral-color: #475569;
+    --neutral-bg: rgba(71, 85, 105, 0.1);
+
+    --premium-color: #ef5350;
+    --discount-color: #26a69a;
+
+    --border-color: rgba(148, 163, 184, 0.08);
+    --border-highlight: rgba(59, 130, 246, 0.2);
+
+    --radius-sm: 4px;
+    --radius-md: 8px;
+    --radius-lg: 12px;
+    --radius-xl: 16px;
+
+    --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 8px 28px rgba(0, 0, 0, 0.4);
+    --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.08);
+
+    --font-primary: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+    --transition-fast: 150ms ease;
+    --transition-normal: 250ms ease;
+    --transition-slow: 400ms ease;
+}
+
+/* ---- Reset & Base ---- */
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html {
+    font-size: 14px;
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+}
+
+body {
+    font-family: var(--font-primary);
+    background: var(--bg-primary);
+    color: var(--text-primary);
+    line-height: 1.5;
+    min-height: 100vh;
+    background-image:
+        radial-gradient(ellipse at 15% 10%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+        radial-gradient(ellipse at 85% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 50%);
+}
+
+/* ---- Scrollbar ---- */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: var(--bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--text-muted);
+    border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: var(--text-secondary);
+}
+
+/* ================================================================
+   NAVIGATION
+   ================================================================ */
+.main-nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    backdrop-filter: blur(20px) saturate(1.4);
+    background: var(--bg-nav);
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-md);
+}
+
+.nav-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+}
+
+.nav-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    text-decoration: none;
+}
+
+.brand-icon {
+    font-size: 22px;
+}
+
+.brand-text {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    color: var(--text-primary);
+}
+
+.brand-highlight {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.nav-links {
+    display: flex;
+    gap: 4px;
+}
+
+.nav-link {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 20px;
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    font-weight: 500;
+    font-size: 13px;
+    color: var(--text-secondary);
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.nav-link::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    opacity: 0;
+    transition: opacity var(--transition-normal);
+    border-radius: var(--radius-md);
+}
+
+.nav-link:hover {
+    color: var(--text-primary);
+}
+
+.nav-link:hover::before {
+    opacity: 0.08;
+}
+
+.nav-link.active {
+    color: var(--text-primary);
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(167, 139, 250, 0.1));
+    box-shadow: inset 0 0 0 1px var(--border-highlight);
+}
+
+.nav-icon {
+    font-size: 16px;
+}
+
+.nav-status {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 12px;
+}
+
+.refresh-indicator {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    background: rgba(34, 211, 238, 0.08);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(34, 211, 238, 0.15);
+}
+
+.pulse-dot {
+    width: 7px;
+    height: 7px;
+    background: var(--accent-cyan);
+    border-radius: 50%;
+    animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+
+    0%,
+    100% {
+        opacity: 1;
+        box-shadow: 0 0 0 0 rgba(34, 211, 238, 0.5);
+    }
+
+    50% {
+        opacity: 0.6;
+        box-shadow: 0 0 0 6px rgba(34, 211, 238, 0);
+    }
+}
+
+.refresh-text {
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.last-update {
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+}
+
+/* ================================================================
+   MAIN CONTENT
+   ================================================================ */
+.main-content {
+    max-width: 1600px;
+    margin: 0 auto;
+    padding: 20px 24px 60px;
+}
+
+/* ---- Dashboard Header ---- */
+.dashboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(167, 139, 250, 0.05) 100%);
+    border: 1px solid var(--border-highlight);
+    border-radius: var(--radius-xl);
+    box-shadow: var(--shadow-glow);
+}
+
+.dashboard-header.smc-theme {
+    background: linear-gradient(135deg, rgba(167, 139, 250, 0.08) 0%, rgba(34, 211, 238, 0.05) 100%);
+    border-color: rgba(167, 139, 250, 0.2);
+}
+
+.dashboard-title {
+    font-size: 24px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.title-icon {
+    font-size: 28px;
+}
+
+.title-highlight {
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.smc-theme .title-highlight {
+    background: linear-gradient(135deg, var(--accent-purple), var(--accent-cyan));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.dashboard-subtitle {
+    color: var(--text-secondary);
+    margin-top: 4px;
+    font-size: 13px;
+}
+
+.header-stats {
+    display: flex;
+    gap: 12px;
+}
+
+.stat-card {
+    text-align: center;
+    padding: 12px 22px;
+    background: rgba(0, 230, 118, 0.05);
+    border: 1px solid rgba(0, 230, 118, 0.12);
+    border-radius: var(--radius-md);
+    min-width: 90px;
+}
+
+.stat-card.stat-sell {
+    background: rgba(255, 82, 82, 0.05);
+    border-color: rgba(255, 82, 82, 0.12);
+}
+
+.stat-card.stat-setup,
+.stat-card.stat-entry {
+    background: rgba(255, 215, 64, 0.05);
+    border-color: rgba(255, 215, 64, 0.12);
+}
+
+.stat-card.stat-bullish {
+    background: rgba(0, 230, 118, 0.05);
+    border-color: rgba(0, 230, 118, 0.12);
+}
+
+.stat-card.stat-bearish {
+    background: rgba(255, 82, 82, 0.05);
+    border-color: rgba(255, 82, 82, 0.12);
+}
+
+.stat-value {
+    display: block;
+    font-size: 22px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    color: var(--text-primary);
+}
+
+.stat-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--text-muted);
+    margin-top: 2px;
+}
+
+/* ================================================================
+   CARDS
+   ================================================================ */
+.card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    margin-bottom: 20px;
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow var(--transition-normal);
+}
+
+.card:hover {
+    box-shadow: var(--shadow-md);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--bg-table-header);
+}
+
+.card-title {
+    font-size: 15px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.card-icon {
+    font-size: 18px;
+}
+
+.card-badge {
+    font-size: 10px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    letter-spacing: 1px;
+    padding: 4px 10px;
+    background: rgba(148, 163, 184, 0.06);
+    border-radius: var(--radius-sm);
+}
+
+.card-legend {
+    background: var(--bg-table-header);
+    padding: 20px;
+}
+
+/* ================================================================
+   TABLES
+   ================================================================ */
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.signal-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 12px;
+}
+
+.signal-table th {
+    padding: 10px 8px;
+    text-align: center;
+    font-weight: 600;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--text-secondary);
+    background: var(--bg-table-header);
+    border-bottom: 1px solid var(--border-color);
+    white-space: nowrap;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+}
+
+.signal-table .sub-header th {
+    font-size: 9px;
+    font-weight: 500;
+    color: var(--text-muted);
+    padding: 6px 4px;
+    letter-spacing: 0.5px;
+}
+
+.th-symbol {
+    text-align: left !important;
+    padding-left: 16px !important;
+    min-width: 90px;
+}
+
+.th-group {
+    min-width: 100px;
+}
+
+.th-signal {
+    min-width: 50px;
+}
+
+.th-setup {
+    min-width: 100px;
+}
+
+.th-action {
+    min-width: 70px;
+}
+
+.th-multi {
+    border-bottom: 2px solid var(--border-highlight) !important;
+}
+
+.th-tf {
+    min-width: 36px;
+    font-family: var(--font-mono);
+}
+
+.th-diamond {
+    color: var(--diamond-color) !important;
+}
+
+.th-structure {
+    min-width: 140px;
+}
+
+.th-bias {
+    min-width: 90px;
+}
+
+.th-strength {
+    min-width: 120px;
+}
+
+.th-entry {
+    min-width: 100px;
+}
+
+.signal-table td {
+    padding: 8px 6px;
+    text-align: center;
+    vertical-align: middle;
+    border-bottom: 1px solid var(--border-color);
+    transition: background var(--transition-fast);
+}
+
+.signal-table tr:nth-child(even) td {
+    background: var(--bg-table-row-even);
+}
+
+.signal-table tr:nth-child(odd) td {
+    background: var(--bg-table-row-odd);
+}
+
+.signal-row:hover td {
+    background: rgba(59, 130, 246, 0.06) !important;
+}
+
+.signal-row.has-signal td {
+    border-left-color: transparent;
+}
+
+.signal-row.has-signal:hover td {
+    background: rgba(59, 130, 246, 0.1) !important;
+}
+
+.td-symbol {
+    text-align: left !important;
+    padding-left: 16px !important;
+    font-weight: 600;
+}
+
+.symbol-name {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.3px;
+}
+
+.td-group {
+    text-align: left !important;
+    padding-left: 8px !important;
+}
+
+.group-badge {
+    font-weight: 600;
+    font-size: 11px;
+    color: var(--accent-cyan);
+}
+
+.group-tf {
+    display: block;
+    font-size: 9px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.td-mini {
+    padding: 6px 3px !important;
+}
+
+/* ================================================================
+   SIGNAL BADGES
+   ================================================================ */
+.signal-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    transition: all var(--transition-fast);
+}
+
+.signal-buy {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+    border: 1px solid rgba(0, 230, 118, 0.2);
+    box-shadow: var(--buy-glow);
+    animation: glowBuy 3s ease-in-out infinite;
+}
+
+.signal-sell {
+    color: var(--sell-color);
+    background: var(--sell-bg);
+    border: 1px solid rgba(255, 82, 82, 0.2);
+    box-shadow: var(--sell-glow);
+    animation: glowSell 3s ease-in-out infinite;
+}
+
+.signal-none {
+    color: var(--neutral-color);
+    background: var(--neutral-bg);
+    border: 1px solid transparent;
+    font-size: 14px;
+}
+
+.signal-diamond {
+    color: var(--diamond-color);
+    background: var(--diamond-bg);
+    border: 1px solid rgba(255, 215, 64, 0.3);
+    box-shadow: var(--diamond-glow);
+    animation: glowDiamond 2s ease-in-out infinite;
+    font-size: 10px;
+    width: 32px;
+}
+
+.signal-diamond-sell {
+    color: #ff8a65;
+    background: rgba(255, 138, 101, 0.12);
+    border: 1px solid rgba(255, 138, 101, 0.25);
+    box-shadow: 0 0 12px rgba(255, 138, 101, 0.3);
+    animation: glowSell 2s ease-in-out infinite;
+    font-size: 10px;
+    width: 32px;
+}
+
+@keyframes glowBuy {
+
+    0%,
+    100% {
+        box-shadow: 0 0 6px rgba(0, 230, 118, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 14px rgba(0, 230, 118, 0.4);
+    }
+}
+
+@keyframes glowSell {
+
+    0%,
+    100% {
+        box-shadow: 0 0 6px rgba(255, 82, 82, 0.2);
+    }
+
+    50% {
+        box-shadow: 0 0 14px rgba(255, 82, 82, 0.4);
+    }
+}
+
+@keyframes glowDiamond {
+
+    0%,
+    100% {
+        box-shadow: 0 0 8px rgba(255, 215, 64, 0.25);
+    }
+
+    50% {
+        box-shadow: 0 0 22px rgba(255, 215, 64, 0.55);
+    }
+}
+
+/* ---- Signal Dots (compact) ---- */
+.signal-dot {
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+    cursor: default;
+}
+
+.dot-buy {
+    color: var(--buy-color);
+    text-shadow: 0 0 6px rgba(0, 230, 118, 0.5);
+}
+
+.dot-sell {
+    color: var(--sell-color);
+    text-shadow: 0 0 6px rgba(255, 82, 82, 0.5);
+}
+
+.dot-none {
+    color: var(--neutral-color);
+    font-size: 16px;
+}
+
+/* ---- Premium/Discount Badges ---- */
+.pd-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 18px;
+    border-radius: 3px;
+    font-weight: 700;
+    font-size: 10px;
+    font-family: var(--font-mono);
+}
+
+.pd-premium {
+    color: var(--premium-color);
+    background: rgba(239, 83, 80, 0.12);
+    border: 1px solid rgba(239, 83, 80, 0.2);
+}
+
+.pd-discount {
+    color: var(--discount-color);
+    background: rgba(38, 166, 154, 0.12);
+    border: 1px solid rgba(38, 166, 154, 0.2);
+}
+
+/* ---- Setup Badge ---- */
+.setup-badge {
+    font-weight: 700;
+    font-size: 11px;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    letter-spacing: 0.3px;
+}
+
+.setup-buy {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+    border: 1px solid rgba(0, 230, 118, 0.15);
+}
+
+.setup-sell {
+    color: var(--sell-color);
+    background: var(--sell-bg);
+    border: 1px solid rgba(255, 82, 82, 0.15);
+}
+
+.setup-none {
+    color: var(--text-muted);
+    font-size: 12px;
+}
+
+/* ---- Action Badge ---- */
+.action-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px 14px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    min-width: 56px;
+}
+
+.action-buy {
+    color: #000;
+    background: linear-gradient(135deg, var(--buy-color), #00c853);
+    box-shadow: 0 2px 8px rgba(0, 230, 118, 0.3);
+}
+
+.action-sell {
+    color: #fff;
+    background: linear-gradient(135deg, var(--sell-color), #f44336);
+    box-shadow: 0 2px 8px rgba(255, 82, 82, 0.3);
+}
+
+.action-wait {
+    color: var(--text-muted);
+    background: var(--neutral-bg);
+    border: 1px solid rgba(71, 85, 105, 0.15);
+}
+
+/* ---- Structure Badge (SMC) ---- */
+.structure-badge {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    white-space: nowrap;
+}
+
+.structure-bullish-trending,
+.structure-bullish-expansion {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+}
+
+.structure-bearish-trending,
+.structure-bearish-expansion {
+    color: var(--sell-color);
+    background: var(--sell-bg);
+}
+
+.structure-bullish-reversal {
+    color: var(--buy-color);
+    background: rgba(0, 230, 118, 0.08);
+    border: 1px dashed rgba(0, 230, 118, 0.3);
+}
+
+.structure-bearish-reversal {
+    color: var(--sell-color);
+    background: rgba(255, 82, 82, 0.08);
+    border: 1px dashed rgba(255, 82, 82, 0.3);
+}
+
+.structure-ranging,
+.structure-consolidation {
+    color: var(--accent-cyan);
+    background: rgba(34, 211, 238, 0.08);
+}
+
+/* ---- Bias Badge ---- */
+.bias-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: var(--radius-sm);
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+}
+
+.bias-bullish {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+}
+
+.bias-bearish {
+    color: var(--sell-color);
+    background: var(--sell-bg);
+}
+
+.bias-neutral {
+    color: var(--text-muted);
+    background: var(--neutral-bg);
+}
+
+/* ---- Strength Bar ---- */
+.strength-bar-container {
+    position: relative;
+    width: 100%;
+    height: 16px;
+    background: rgba(148, 163, 184, 0.06);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.strength-bar {
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width var(--transition-slow);
+}
+
+.strength-bar.bias-bullish {
+    background: linear-gradient(90deg, rgba(0, 230, 118, 0.3), rgba(0, 230, 118, 0.6));
+}
+
+.strength-bar.bias-bearish {
+    background: linear-gradient(90deg, rgba(255, 82, 82, 0.3), rgba(255, 82, 82, 0.6));
+}
+
+.strength-bar.bias-neutral {
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.2), rgba(148, 163, 184, 0.3));
+}
+
+.strength-value {
+    position: absolute;
+    right: 6px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 9px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* ---- Entry Scores ---- */
+.entry-scores {
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    font-size: 12px;
+    font-family: var(--font-mono);
+}
+
+.score-buy {
+    color: var(--buy-color);
+}
+
+.score-sell {
+    color: var(--sell-color);
+}
+
+/* ================================================================
+   LEGEND
+   ================================================================ */
+.legend-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+}
+
+.legend-section h4 {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+}
+
+.legend-items {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+.legend-item strong {
+    color: var(--accent-cyan);
+    font-family: var(--font-mono);
+}
+
+/* ================================================================
+   TOAST NOTIFICATIONS
+   ================================================================ */
+.toast-container {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    z-index: 1000;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.toast {
+    padding: 12px 20px;
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-lg);
+    font-size: 13px;
+    color: var(--text-primary);
+    animation: slideInToast 0.3s ease-out;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    max-width: 320px;
+    backdrop-filter: blur(12px);
+}
+
+.toast-success {
+    border-left: 3px solid var(--buy-color);
+}
+
+.toast-info {
+    border-left: 3px solid var(--accent-cyan);
+}
+
+@keyframes slideInToast {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
+/* ================================================================
+   RESPONSIVE
+   ================================================================ */
+@media (max-width: 1024px) {
+    .dashboard-header {
+        flex-direction: column;
+        gap: 16px;
+        text-align: center;
+    }
+
+    .header-stats {
+        justify-content: center;
+    }
+
+    .legend-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .nav-container {
+        padding: 0 12px;
+    }
+
+    .nav-status {
+        display: none;
+    }
+
+    .main-content {
+        padding: 12px;
+    }
+
+    .dashboard-title {
+        font-size: 18px;
+    }
+
+    .header-stats {
+        flex-wrap: wrap;
+    }
+
+    .stat-card {
+        min-width: 70px;
+        padding: 8px 14px;
+    }
+
+    .signal-table {
+        font-size: 11px;
+    }
+}
+
+/* ---- Table dense mode (single TF signals) ---- */
+.signal-table-dense th {
+    padding: 8px 3px;
+    font-size: 9px;
+}
+
+.signal-table-dense td {
+    padding: 5px 2px;
+}
+
+/* ================================================================
+   CURRENCY STRENGTH SUMMARY
+   ================================================================ */
+
+/* ---- Currency Name ---- */
+.currency-name {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 14px;
+    letter-spacing: 0.5px;
+}
+
+.currency-flag {
+    font-size: 16px;
+    margin-left: 6px;
+}
+
+.td-rank {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 13px;
+    color: var(--text-muted);
+}
+
+/* ---- Direction Badge ---- */
+.direction-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 12px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    letter-spacing: 0.5px;
+    white-space: nowrap;
+}
+
+.direction-bullish {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+    border: 1px solid rgba(0, 230, 118, 0.2);
+}
+
+.direction-bearish {
+    color: var(--sell-color);
+    background: var(--sell-bg);
+    border: 1px solid rgba(255, 82, 82, 0.2);
+}
+
+.direction-neutral {
+    color: var(--text-muted);
+    background: var(--neutral-bg);
+    border: 1px solid rgba(71, 85, 105, 0.15);
+}
+
+.dir-arrow {
+    font-size: 10px;
+}
+
+/* ---- Strength Meter ---- */
+.strength-meter {
+    position: relative;
+    width: 100%;
+    height: 20px;
+    background: rgba(148, 163, 184, 0.06);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+
+.strength-meter-bar {
+    height: 100%;
+    border-radius: var(--radius-sm);
+    transition: width 0.6s ease;
+}
+
+.strength-meter-bar.strength-bar-bullish {
+    background: linear-gradient(90deg, rgba(0, 230, 118, 0.2), rgba(0, 230, 118, 0.6));
+}
+
+.strength-meter-bar.strength-bar-bearish {
+    background: linear-gradient(90deg, rgba(255, 82, 82, 0.2), rgba(255, 82, 82, 0.6));
+}
+
+.strength-meter-bar.strength-bar-neutral {
+    background: linear-gradient(90deg, rgba(148, 163, 184, 0.15), rgba(148, 163, 184, 0.3));
+}
+
+.strength-meter-value {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+/* ---- Score Cells ---- */
+.td-score {
+    font-family: var(--font-mono);
+    font-weight: 600;
+    font-size: 12px;
+}
+
+.score-bullish-cell {
+    color: var(--buy-color);
+}
+
+.score-bearish-cell {
+    color: var(--sell-color);
+}
+
+.net-positive {
+    color: var(--buy-color);
+}
+
+.net-negative {
+    color: var(--sell-color);
+}
+
+.net-zero {
+    color: var(--text-muted);
+}
+
+/* ---- Pair Chips ---- */
+.td-pairs {
+    text-align: left !important;
+    padding-left: 8px !important;
+}
+
+.pair-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 9px;
+    font-family: var(--font-mono);
+    font-weight: 500;
+    margin: 1px 2px;
+    white-space: nowrap;
+}
+
+.pair-bullish {
+    color: var(--buy-color);
+    background: rgba(0, 230, 118, 0.08);
+    border: 1px solid rgba(0, 230, 118, 0.15);
+}
+
+.pair-bearish {
+    color: var(--sell-color);
+    background: rgba(255, 82, 82, 0.08);
+    border: 1px solid rgba(255, 82, 82, 0.15);
+}
+
+.pair-neutral {
+    color: var(--text-muted);
+    background: rgba(148, 163, 184, 0.06);
+    border: 1px solid rgba(148, 163, 184, 0.1);
+}
+
+.pair-source {
+    font-size: 7px;
+    opacity: 0.7;
+    text-transform: uppercase;
+}
+
+.pair-dir {
+    font-size: 8px;
+    opacity: 0.8;
+}
+
+/* ---- Opportunities Grid ---- */
+.opportunities-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.opportunity-card {
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 14px 16px;
+    transition: all var(--transition-normal);
+    position: relative;
+    overflow: hidden;
+}
+
+.opportunity-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+}
+
+.opp-buy::before {
+    background: linear-gradient(90deg, var(--buy-color), #00c853);
+}
+
+.opp-sell::before {
+    background: linear-gradient(90deg, var(--sell-color), #f44336);
+}
+
+.opportunity-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+    border-color: var(--border-highlight);
+}
+
+.opp-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.opp-pair {
+    font-family: var(--font-mono);
+    font-weight: 700;
+    font-size: 16px;
+    letter-spacing: 0.3px;
+}
+
+.opp-body {
+    margin-bottom: 10px;
+}
+
+.opp-vs {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    margin-bottom: 6px;
+}
+
+.opp-strong {
+    color: var(--buy-color);
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.opp-weak {
+    color: var(--sell-color);
+    font-weight: 700;
+    font-family: var(--font-mono);
+    font-size: 13px;
+}
+
+.opp-separator {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-transform: uppercase;
+}
+
+.opp-arrow {
+    font-size: 10px;
+    margin-right: 2px;
+}
+
+.opp-reason {
+    font-size: 10px;
+    color: var(--text-muted);
+    text-align: center;
+    font-family: var(--font-mono);
+}
+
+.opp-footer {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.opp-score-bar {
+    flex: 1;
+    height: 4px;
+    background: rgba(148, 163, 184, 0.1);
+    border-radius: 2px;
+    overflow: hidden;
+}
+
+.opp-score-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--accent-blue), var(--accent-purple));
+    transition: width 0.4s ease;
+}
+
+.opp-score-text {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    color: var(--text-muted);
+    white-space: nowrap;
+}
+
+/* ---- Responsive Summary ---- */
+@media (max-width: 768px) {
+    .opportunities-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ================================================================
+   VOLUME DELTA DASHBOARD
+   ================================================================ */
+
+/* ---- Pressure Badges ---- */
+.pressure-badge,
+.pressure-badge-sm {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: var(--radius-sm);
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.pressure-badge {
+    font-size: 10px;
+}
+
+.pressure-badge-sm {
+    font-size: 8px;
+    padding: 2px 6px;
+}
+
+.pressure-heavy-buy {
+    color: #00ff88;
+    background: rgba(0, 255, 136, 0.15);
+    border: 1px solid rgba(0, 255, 136, 0.3);
+    text-shadow: 0 0 8px rgba(0, 255, 136, 0.4);
+    animation: glowBuy 2s ease-in-out infinite;
+}
+
+.pressure-strong-buy {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+    border: 1px solid rgba(0, 230, 118, 0.25);
+}
+
+.pressure-mod-buy {
+    color: var(--buy-color);
+    background: rgba(0, 230, 118, 0.06);
+    border: 1px solid rgba(0, 230, 118, 0.12);
+    opacity: 0.85;
+}
+
+.pressure-slight-buy {
+    color: var(--buy-color);
+    background: rgba(0, 230, 118, 0.03);
+    border: 1px solid rgba(0, 230, 118, 0.08);
+    opacity: 0.65;
+}
+
+.pressure-heavy-sell {
+    color: #ff4466;
+    background: rgba(255, 68, 102, 0.15);
+    border: 1px solid rgba(255, 68, 102, 0.3);
+    text-shadow: 0 0 8px rgba(255, 68, 102, 0.4);
+    animation: glowSell 2s ease-in-out infinite;
+}
+
+.pressure-strong-sell {
+    color: var(--sell-color);
+    background: var(--sell-bg);
+    border: 1px solid rgba(255, 82, 82, 0.25);
+}
+
+.pressure-mod-sell {
+    color: var(--sell-color);
+    background: rgba(255, 82, 82, 0.06);
+    border: 1px solid rgba(255, 82, 82, 0.12);
+    opacity: 0.85;
+}
+
+.pressure-slight-sell {
+    color: var(--sell-color);
+    background: rgba(255, 82, 82, 0.03);
+    border: 1px solid rgba(255, 82, 82, 0.08);
+    opacity: 0.65;
+}
+
+.pressure-neutral {
+    color: var(--text-muted);
+    background: var(--neutral-bg);
+    border: 1px solid rgba(71, 85, 105, 0.12);
+}
+
+/* ---- Volume Ratio Bar ---- */
+.volume-ratio-bar {
+    display: flex;
+    width: 100%;
+    height: 22px;
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    background: rgba(148, 163, 184, 0.06);
+}
+
+.ratio-buy {
+    background: linear-gradient(90deg, rgba(0, 230, 118, 0.25), rgba(0, 230, 118, 0.45));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    transition: width 0.5s ease;
+}
+
+.ratio-sell {
+    background: linear-gradient(90deg, rgba(255, 82, 82, 0.25), rgba(255, 82, 82, 0.45));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    transition: width 0.5s ease;
+}
+
+.ratio-label {
+    font-size: 9px;
+    font-family: var(--font-mono);
+    font-weight: 600;
+    color: var(--text-primary);
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* ---- VD Cell Colors ---- */
+.vd-strong-buy {
+    color: #00ff88 !important;
+    font-weight: 700;
+    text-shadow: 0 0 4px rgba(0, 255, 136, 0.3);
+}
+
+.vd-buy {
+    color: var(--buy-color) !important;
+    font-weight: 600;
+}
+
+.vd-strong-sell {
+    color: #ff4466 !important;
+    font-weight: 700;
+    text-shadow: 0 0 4px rgba(255, 68, 102, 0.3);
+}
+
+.vd-sell {
+    color: var(--sell-color) !important;
+    font-weight: 600;
+}
+
+.vd-neutral {
+    color: var(--text-muted) !important;
+}
+
+/* ---- VD Responsive ---- */
+@media (max-width: 768px) {
+    .volume-ratio-bar {
+        height: 18px;
+    }
+
+    .ratio-label {
+        font-size: 7px;
+    }
+}
+
+/* ================================================================
+   MT5 CONNECTION BADGE
+   ================================================================ */
+.mt5-badge {
+    font-size: 8px;
+    font-weight: 700;
+    font-family: var(--font-mono);
+    letter-spacing: 1px;
+    padding: 2px 8px;
+    border-radius: var(--radius-sm);
+    margin-left: 8px;
+    text-transform: uppercase;
+}
+
+.mt5-live {
+    color: var(--buy-color);
+    background: var(--buy-bg);
+    border: 1px solid rgba(0, 230, 118, 0.3);
+    animation: glowBuy 3s ease-in-out infinite;
+}
+
+.mt5-sim {
+    color: var(--diamond-color);
+    background: var(--diamond-bg);
+    border: 1px solid rgba(255, 215, 64, 0.3);
+}

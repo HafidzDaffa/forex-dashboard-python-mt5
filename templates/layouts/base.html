@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Trading Signal Dashboard{% endblock %}</title>
+    <meta name="description" content="BBMA & SMC Trading Signal Dashboard - Real-time multi-timeframe signal analysis">
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet">
+
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+    {% block styles %}{% endblock %}
+</head>
+
+<body>
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-brand">
+                <span class="brand-icon">📊</span>
+                <span class="brand-text">Signal<span class="brand-highlight">Hub</span></span>
+                {% if mt5_connected %}
+                <span class="mt5-badge mt5-live">MT5 LIVE</span>
+                {% else %}
+                <span class="mt5-badge mt5-sim">SIMULATED</span>
+                {% endif %}
+            </div>
+            <div class="nav-links">
+                <a href="{{ url_for('bbma') }}" class="nav-link {{ 'active' if request.path == '/bbma' }}"
+                    id="nav-bbma">
+                    <span class="nav-icon">🎯</span>
+                    <span>BBMA</span>
+                </a>
+                <a href="{{ url_for('smc') }}" class="nav-link {{ 'active' if request.path == '/smc' }}"
+                    id="nav-smc">
+                    <span class="nav-icon">💎</span>
+                    <span>SMC</span>
+                </a>
+                <a href="{{ url_for('summary') }}" class="nav-link {{ 'active' if request.path == '/summary' }}"
+                    id="nav-summary">
+                    <span class="nav-icon">💪</span>
+                    <span>Summary</span>
+                </a>
+                <a href="{{ url_for('volume_delta') }}"
+                    class="nav-link {{ 'active' if request.path == '/volume-delta' }}" id="nav-volume-delta">
+                    <span class="nav-icon">📈</span>
+                    <span>Vol Delta</span>
+                </a>
+            </div>
+            <div class="nav-status">
+                <div class="refresh-indicator" id="refresh-indicator">
+                    <div class="pulse-dot"></div>
+                    <span class="refresh-text" id="refresh-countdown">Next refresh: 5:00</span>
+                </div>
+                <div class="last-update" id="last-update">
+                    Updated: {{ updatedAt if updatedAt is defined else now.strftime('%H:%M:%S') }}
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
+    <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

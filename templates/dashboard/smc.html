@@ -1,0 +1,176 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}SMC Dashboard Signal{% endblock %}
+
+{% block content %}
+<div class="dashboard-header smc-theme" id="smc-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">💎</span>
+            SMC <span class="title-highlight">Dashboard Signal</span>
+        </h1>
+        <p class="dashboard-subtitle">Smart Money Concept — Institutional Order Flow Analysis</p>
+    </div>
+    <div class="header-stats">
+        <div class="stat-card stat-bullish">
+            <span class="stat-value" id="bullish-count">0</span>
+            <span class="stat-label">Bullish</span>
+        </div>
+        <div class="stat-card stat-bearish">
+            <span class="stat-value" id="bearish-count">0</span>
+            <span class="stat-label">Bearish</span>
+        </div>
+        <div class="stat-card stat-entry">
+            <span class="stat-value" id="entry-count">0</span>
+            <span class="stat-label">Entry Ready</span>
+        </div>
+    </div>
+</div>
+
+{# ====================== SMC OVERVIEW TABLE ====================== #}
+<div class="card" id="smc-overview-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🏦</span>
+            Market Structure & Bias
+        </h2>
+        <span class="card-badge">STRUCTURE • BIAS • ENTRY</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table" id="smc-overview-table">
+            <thead>
+                <tr>
+                    <th class="th-symbol">Symbol</th>
+                    <th class="th-structure">Market Structure</th>
+                    <th class="th-bias">Bias</th>
+                    <th class="th-strength">Strength</th>
+                    <th class="th-entry">Entry Signal</th>
+                    <th class="th-action">Action</th>
+                </tr>
+            </thead>
+            <tbody id="smc-overview-body">
+                {% for item in signals %}
+                {% set bias_class = 'bias-bullish' if item.bias.direction == 'BULLISH' else ('bias-bearish' if
+                item.bias.direction == 'BEARISH' else 'bias-neutral') %}
+                <tr class="signal-row {{ 'has-signal' if item.entry.action != 'WAIT' }}"
+                    data-symbol="{{ item.symbol }}">
+                    <td class="td-symbol">
+                        <span class="symbol-name">{{ item.symbol }}</span>
+                    </td>
+                    <td class="td-structure">
+                        <span class="structure-badge structure-{{ item.structure | lower | replace(' ', '-') }}">
+                            {{ item.structure }}
+                        </span>
+                    </td>
+                    <td class="td-bias">
+                        <span class="bias-badge {{ bias_class }}">{{ item.bias.direction }}</span>
+                    </td>
+                    <td class="td-strength">
+                        <div class="strength-bar-container">
+                            <div class="strength-bar {{ bias_class }}"
+                                style="width: {{ [item.bias.strength, 100] | min }}%"></div>
+                            <span class="strength-value">{{ item.bias.strength }}%</span>
+                        </div>
+                    </td>
+                    <td class="td-entry">
+                        <div class="entry-scores">
+                            <span class="score-buy" title="Buy Score">📈 {{ item.entry.buyScore }}</span>
+                            <span class="score-sell" title="Sell Score">📉 {{ item.entry.sellScore }}</span>
+                        </div>
+                    </td>
+                    <td class="td-action">
+                        <span class="action-badge action-{{ item.entry.action | lower }}">
+                            {{ item.entry.action }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== DETAILED SMC SIGNALS TABLE ====================== #}
+<div class="card" id="smc-detail-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🔍</span>
+            Detailed SMC Signals per Timeframe
+        </h2>
+        <span class="card-badge">BOS • CHoCH • OB • FVG • LIQUIDITY • PREMIUM/DISCOUNT</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table signal-table-dense" id="smc-detail-table">
+            <thead>
+                <tr>
+                    <th class="th-symbol" rowspan="2">Symbol</th>
+                    {% for key, label in indicators.items() %}
+                    <th class="th-multi" colspan="{{ timeframes|length }}">{{ key | upper }}</th>
+                    {% endfor %}
+                </tr>
+                <tr class="sub-header">
+                    {% for key in indicators %}
+                    {% for tf in timeframes %}
+                    <th class="th-tf">{{ tf }}</th>
+                    {% endfor %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody id="smc-detail-body">
+                {% for item in signals %}
+                <tr class="signal-row" data-symbol="{{ item.symbol }}">
+                    <td class="td-symbol">
+                        <span class="symbol-name">{{ item.symbol }}</span>
+                    </td>
+                    {% for key in indicators %}
+                    {% for tf in timeframes %}
+                    <td class="td-signal td-mini">
+                        {% if key == 'premium_discount' %}
+                        {{ item.signals[tf][key] | pd_badge | safe }}
+                        {% else %}
+                        {{ item.signals[tf][key] | smc_dot | safe }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== LEGEND ====================== #}
+<div class="card card-legend">
+    <div class="legend-grid">
+        <div class="legend-section">
+            <h4>SMC Signals</h4>
+            <div class="legend-items">
+                <span class="legend-item"><span class="signal-dot dot-buy">●</span> Bullish</span>
+                <span class="legend-item"><span class="signal-dot dot-sell">●</span> Bearish</span>
+                <span class="legend-item"><span class="signal-dot dot-none">·</span> No Signal</span>
+                <span class="legend-item"><span class="pd-badge pd-premium">P</span> Premium Zone (Sell Area)</span>
+                <span class="legend-item"><span class="pd-badge pd-discount">D</span> Discount Zone (Buy Area)</span>
+            </div>
+        </div>
+        <div class="legend-section">
+            <h4>SMC Indicators</h4>
+            <div class="legend-items">
+                <span class="legend-item"><strong>BOS</strong> = Break of Structure (trend continuation)</span>
+                <span class="legend-item"><strong>CHoCH</strong> = Change of Character (trend reversal)</span>
+                <span class="legend-item"><strong>OB</strong> = Order Block (institutional supply/demand)</span>
+                <span class="legend-item"><strong>FVG</strong> = Fair Value Gap (imbalanced zones)</span>
+                <span class="legend-item"><strong>LIQUIDITY</strong> = Liquidity Sweep (stop hunts)</span>
+                <span class="legend-item"><strong>P/D</strong> = Premium/Discount Zone</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'smc';
+    window.apiEndpoint = '/api/smc-signals';
+</script>
+{% endblock %}

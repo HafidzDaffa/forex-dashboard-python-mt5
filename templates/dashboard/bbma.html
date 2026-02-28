@@ -1,0 +1,179 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}BBMA Dashboard Signal{% endblock %}
+
+{% block content %}
+<div class="dashboard-header" id="bbma-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">🎯</span>
+            BBMA <span class="title-highlight">Dashboard Signal</span>
+        </h1>
+        <p class="dashboard-subtitle">Bollinger Band Moving Average — Multi-Timeframe Setup Detection</p>
+    </div>
+    <div class="header-stats">
+        <div class="stat-card">
+            <span class="stat-value" id="buy-count">0</span>
+            <span class="stat-label">Buy Signals</span>
+        </div>
+        <div class="stat-card stat-sell">
+            <span class="stat-value" id="sell-count">0</span>
+            <span class="stat-label">Sell Signals</span>
+        </div>
+        <div class="stat-card stat-setup">
+            <span class="stat-value" id="setup-count">0</span>
+            <span class="stat-label">Active Setups</span>
+        </div>
+    </div>
+</div>
+
+{# ====================== COMBO SETUPS TABLE ====================== #}
+<div class="card" id="combo-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">⚡</span>
+            Multi-Timeframe Combo Setups
+        </h2>
+        <span class="card-badge">REM • REE • RME • ZZL • DIAMOND</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table" id="combo-table">
+            <thead>
+                <tr>
+                    <th class="th-symbol" rowspan="2">Symbol</th>
+                    <th class="th-group" rowspan="2">TF Group</th>
+                    <th class="th-signal">REM</th>
+                    <th class="th-signal">REE</th>
+                    <th class="th-signal">RME</th>
+                    <th class="th-signal">ZZL</th>
+                    <th class="th-signal th-diamond">DIAMOND</th>
+                    <th class="th-setup">Setup</th>
+                    <th class="th-action">Action</th>
+                </tr>
+                <tr class="sub-header">
+                    <th>RE+E+M</th>
+                    <th>RE+E+E</th>
+                    <th>RE+M+E</th>
+                    <th>Zone</th>
+                    <th>Nuclear</th>
+                    <th>Active</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="combo-body">
+                {% for item in signals %}
+                {% for group_name, combo in item.combos.items() %}
+                <tr class="signal-row {{ 'has-signal' if combo.action != 'WAIT' }}" data-symbol="{{ item.symbol }}"
+                    data-group="{{ group_name }}">
+                    {% if loop.first %}
+                    <td class="td-symbol" rowspan="{{ item.combos|length }}">
+                        <span class="symbol-name">{{ item.symbol }}</span>
+                    </td>
+                    {% endif %}
+                    <td class="td-group">
+                        <span class="group-badge">{{ group_name }}</span>
+                        <small class="group-tf">{{ combo.timeframes | join(' → ') }}</small>
+                    </td>
+                    <td class="td-signal">{{ combo.rem | signal_badge | safe }}</td>
+                    <td class="td-signal">{{ combo.ree | signal_badge | safe }}</td>
+                    <td class="td-signal">{{ combo.rme | signal_badge | safe }}</td>
+                    <td class="td-signal">{{ combo.zzl | signal_badge | safe }}</td>
+                    <td class="td-signal td-diamond">{{ combo.diamond | diamond_badge | safe }}</td>
+                    <td class="td-setup">
+                        {% if combo.setup %}
+                        <span class="setup-badge {{ 'setup-buy' if combo.signal == 1 else 'setup-sell' }}">
+                            {{ combo.setup }} {{ 'Buy' if combo.signal == 1 else 'Sell' }}
+                        </span>
+                        {% else %}
+                        <span class="setup-none">---</span>
+                        {% endif %}
+                    </td>
+                    <td class="td-action">
+                        <span class="action-badge action-{{ combo.action | lower }}">
+                            {{ combo.action }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== SINGLE-TF SIGNALS TABLE ====================== #}
+<div class="card" id="singles-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">📡</span>
+            Single Timeframe Signals
+        </h2>
+        <span class="card-badge">EXTREME • REENTRY • MHV • CSM • CSAK</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table signal-table-dense" id="singles-table">
+            <thead>
+                <tr>
+                    <th class="th-symbol" rowspan="2">Symbol</th>
+                    {% for indicator in ['Extreme', 'Reentry', 'MHV', 'CSM', 'CSAK'] %}
+                    <th class="th-multi" colspan="{{ timeframes|length }}">{{ indicator }}</th>
+                    {% endfor %}
+                </tr>
+                <tr class="sub-header">
+                    {% for i in range(5) %}
+                    {% for tf in timeframes %}
+                    <th class="th-tf">{{ tf }}</th>
+                    {% endfor %}
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody id="singles-body">
+                {% for item in signals %}
+                <tr class="signal-row" data-symbol="{{ item.symbol }}">
+                    <td class="td-symbol">
+                        <span class="symbol-name">{{ item.symbol }}</span>
+                    </td>
+                    {% for indicator in ['extreme', 'reentry', 'mhv', 'csm', 'csak'] %}
+                    {% for tf in timeframes %}
+                    <td class="td-signal td-mini">{{ item.singleTF[tf][indicator] | signal_dot | safe }}</td>
+                    {% endfor %}
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== LEGEND ====================== #}
+<div class="card card-legend">
+    <div class="legend-grid">
+        <div class="legend-section">
+            <h4>Signals</h4>
+            <div class="legend-items">
+                <span class="legend-item">{{ 1 | signal_badge | safe }} Buy Signal</span>
+                <span class="legend-item">{{ -1 | signal_badge | safe }} Sell Signal</span>
+                <span class="legend-item">{{ 0 | signal_badge | safe }} No Signal</span>
+                <span class="legend-item">{{ 1 | diamond_badge | safe }} Diamond Buy</span>
+            </div>
+        </div>
+        <div class="legend-section">
+            <h4>Combo Setup Formulas</h4>
+            <div class="legend-items">
+                <span class="legend-item"><strong>REM</strong> = Reentry (HTF) + Extreme (MTF) + MHV (LTF)</span>
+                <span class="legend-item"><strong>REE</strong> = Reentry (HTF) + Extreme (MTF) + Extreme (LTF)</span>
+                <span class="legend-item"><strong>RME</strong> = Reentry (HTF) + MHV (MTF) + Extreme (LTF)</span>
+                <span class="legend-item"><strong>ZZL</strong> = Zone Zero Loss</span>
+                <span class="legend-item"><strong>DIAMOND</strong> = Nuclear Setup (Rarest)</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'bbma';
+    window.apiEndpoint = '/api/bbma-signals';
+</script>
+{% endblock %}

@@ -1,0 +1,201 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Currency Strength Summary{% endblock %}
+
+{% block content %}
+{% set flags = {'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'NZD': '🇳🇿',
+'CHF': '🇨🇭', 'XAU': '🪙'} %}
+
+<div class="dashboard-header smc-theme" id="summary-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">💪</span>
+            Currency <span class="title-highlight">Strength Summary</span>
+        </h1>
+        <p class="dashboard-subtitle">Aggregate Analysis — BBMA + SMC Combined Currency Power Ranking</p>
+    </div>
+    <div class="header-stats">
+        <div class="stat-card stat-bullish">
+            <span class="stat-value" id="strongest-currency">{{ strongest.currency if strongest else '-' }}</span>
+            <span class="stat-label">Strongest</span>
+        </div>
+        <div class="stat-card stat-bearish">
+            <span class="stat-value" id="weakest-currency">{{ weakest.currency if weakest else '-' }}</span>
+            <span class="stat-label">Weakest</span>
+        </div>
+        <div class="stat-card stat-entry">
+            <span class="stat-value" id="opportunities-count">{{ opportunities|length }}</span>
+            <span class="stat-label">Opportunities</span>
+        </div>
+    </div>
+</div>
+
+{# ====================== CURRENCY STRENGTH RANKING ====================== #}
+<div class="card" id="strength-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">📊</span>
+            Currency Power Ranking
+        </h2>
+        <span class="card-badge">BBMA + SMC COMBINED</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table" id="strength-table">
+            <thead>
+                <tr>
+                    <th style="width:40px">#</th>
+                    <th class="th-symbol">Currency</th>
+                    <th style="min-width:120px">Direction</th>
+                    <th style="min-width:200px">Strength</th>
+                    <th style="min-width:60px">Bullish</th>
+                    <th style="min-width:60px">Bearish</th>
+                    <th style="min-width:60px">Net</th>
+                    <th style="min-width:250px">Top Pair Contributors</th>
+                </tr>
+            </thead>
+            <tbody id="strength-body">
+                {% for cur in currencies %}
+                {% set dir_class = 'direction-bullish' if cur.trend == 'bullish' else ('direction-bearish' if cur.trend
+                == 'bearish' else 'direction-neutral') %}
+                {% set bar_class = 'strength-bar-bullish' if cur.trend == 'bullish' else ('strength-bar-bearish' if
+                cur.trend == 'bearish' else 'strength-bar-neutral') %}
+                {% set net_class = 'net-positive' if cur.net > 0 else ('net-negative' if cur.net < 0 else 'net-zero' )
+                    %} <tr class="signal-row {{ 'has-signal' if cur.trend != 'neutral' }}"
+                    data-currency="{{ cur.currency }}">
+                    <td class="td-rank">{{ loop.index }}</td>
+                    <td class="td-symbol">
+                        <span class="currency-flag">{{ flags.get(cur.currency, '🏳️') }}</span>
+                        <span class="currency-name">{{ cur.currency }}</span>
+                    </td>
+                    <td>
+                        <span class="direction-badge {{ dir_class }}">
+                            {% if cur.trend == 'bullish' %}
+                            <span class="dir-arrow">▲</span>
+                            {% elif cur.trend == 'bearish' %}
+                            <span class="dir-arrow">▼</span>
+                            {% else %}
+                            <span class="dir-arrow">◆</span>
+                            {% endif %}
+                            {{ cur.direction }}
+                        </span>
+                    </td>
+                    <td>
+                        <div class="strength-meter">
+                            <div class="strength-meter-bar {{ bar_class }}"
+                                style="width: {{ [cur.strength, 100] | min }}%"></div>
+                            <span class="strength-meter-value">{{ cur.strength }}%</span>
+                        </div>
+                    </td>
+                    <td class="td-score score-bullish-cell">{{ cur.bullish }}</td>
+                    <td class="td-score score-bearish-cell">{{ cur.bearish }}</td>
+                    <td class="td-score {{ net_class }}">
+                        <strong>{{ '+' if cur.net > 0 }}{{ cur.net }}</strong>
+                    </td>
+                    <td class="td-pairs">
+                        {% for pair in cur.topPairs %}
+                        <span class="pair-chip pair-{{ pair.impact }}"
+                            title="{{ pair.source }}: {{ pair.symbol }} {{ pair.direction }}">
+                            <span class="pair-source">{{ pair.source }}</span>
+                            {{ pair.symbol }}
+                            <span class="pair-dir">{{ pair.direction }}</span>
+                        </span>
+                        {% else %}
+                        <span class="setup-none">—</span>
+                        {% endfor %}
+                    </td>
+                    </tr>
+                    {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== BEST OPPORTUNITIES ====================== #}
+{% if opportunities|length > 0 %}
+<div class="card" id="opportunities-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🎯</span>
+            Best Trading Opportunities
+        </h2>
+        <span class="card-badge">STRONG vs WEAK</span>
+    </div>
+    <div class="opportunities-grid">
+        {% for opp in opportunities %}
+        {% set is_long = opp.action == 'BUY' %}
+        <div class="opportunity-card {{ 'opp-buy' if is_long else 'opp-sell' }}">
+            <div class="opp-header">
+                <span class="opp-pair">{{ opp.pair }}</span>
+                <span class="action-badge {{ 'action-buy' if is_long else 'action-sell' }}">{{ opp.action }}</span>
+            </div>
+            <div class="opp-body">
+                <div class="opp-vs">
+                    <span class="opp-strong">
+                        <span class="opp-arrow">▲</span>
+                        {{ opp.strong }}
+                    </span>
+                    <span class="opp-separator">vs</span>
+                    <span class="opp-weak">
+                        <span class="opp-arrow">▼</span>
+                        {{ opp.weak }}
+                    </span>
+                </div>
+                <div class="opp-reason">{{ opp.reasoning }}</div>
+            </div>
+            <div class="opp-footer">
+                <div class="opp-score-bar">
+                    <div class="opp-score-fill" style="width: {{ [opp.score * 5, 100] | min }}%"></div>
+                </div>
+                <span class="opp-score-text">Score: {{ opp.score }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endif %}
+
+{# ====================== LEGEND ====================== #}
+<div class="card" id="legend-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">📖</span>
+            How It Works
+        </h2>
+    </div>
+    <div class="card-legend">
+        <div class="legend-grid">
+            <div class="legend-section">
+                <h4>Scoring Method</h4>
+                <div class="legend-items">
+                    <div class="legend-item"><strong>BBMA Combo (Diamond)</strong> = +5 per signal (heaviest weight)
+                    </div>
+                    <div class="legend-item"><strong>BBMA Combo (REM/REE/RME/ZZL)</strong> = +3 per signal</div>
+                    <div class="legend-item"><strong>SMC Bias (D1+H4)</strong> = +4 per direction</div>
+                    <div class="legend-item"><strong>SMC Entry (H1+M15)</strong> = +3 per action</div>
+                    <div class="legend-item"><strong>Individual Signals</strong> = +1 each</div>
+                </div>
+            </div>
+            <div class="legend-section">
+                <h4>Directions</h4>
+                <div class="legend-items">
+                    <div class="legend-item"><span class="direction-badge direction-bullish"
+                            style="display:inline-flex">▲ STRONG UP</span> Net score &gt; +2</div>
+                    <div class="legend-item"><span class="direction-badge direction-bullish"
+                            style="display:inline-flex;opacity:.7">▲ SLIGHTLY UP</span> Net score 1-2</div>
+                    <div class="legend-item"><span class="direction-badge direction-neutral"
+                            style="display:inline-flex">◆ NEUTRAL</span> Net score = 0</div>
+                    <div class="legend-item"><span class="direction-badge direction-bearish"
+                            style="display:inline-flex">▼ STRONG DOWN</span> Net score &lt; -2</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'summary';
+    window.apiEndpoint = '/api/currency-strength';
+</script>
+{% endblock %}

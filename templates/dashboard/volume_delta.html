@@ -1,0 +1,230 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Volume Delta Analysis{% endblock %}
+
+{% block content %}
+{% set flags = {'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'NZD': '🇳🇿',
+'CHF': '🇨🇭', 'XAU': '🪙'} %}
+
+<div class="dashboard-header smc-theme" id="vd-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">📈</span>
+            Volume <span class="title-highlight">Delta Analysis</span>
+        </h1>
+        <p class="dashboard-subtitle">Per-Currency Buying & Selling Volume Pressure — Multi-Timeframe</p>
+    </div>
+    <div class="header-stats">
+        <div class="stat-card stat-bullish">
+            <span class="stat-value" id="most-buying">{{ mostBuying.currency if mostBuying else '-' }}</span>
+            <span class="stat-label">Most Buying</span>
+        </div>
+        <div class="stat-card stat-bearish">
+            <span class="stat-value" id="most-selling">{{ mostSelling.currency if mostSelling else '-' }}</span>
+            <span class="stat-label">Most Selling</span>
+        </div>
+        <div class="stat-card stat-entry">
+            <span class="stat-value" id="pair-count">{{ pairs|length }}</span>
+            <span class="stat-label">Pairs Tracked</span>
+        </div>
+    </div>
+</div>
+
+{# ====================== CURRENCY VOLUME DELTA RANKING ====================== #}
+<div class="card" id="currency-delta-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">💰</span>
+            Currency Volume Delta Ranking
+        </h2>
+        <span class="card-badge">AGGREGATE ALL PAIRS</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table" id="currency-delta-table">
+            <thead>
+                <tr>
+                    <th style="width:40px">#</th>
+                    <th class="th-symbol">Currency</th>
+                    <th style="min-width:130px">Pressure</th>
+                    <th style="min-width:200px">Buy vs Sell</th>
+                    <th style="min-width:80px">Buy Vol</th>
+                    <th style="min-width:80px">Sell Vol</th>
+                    <th style="min-width:70px">Net Δ</th>
+                    <th style="min-width:70px">Avg Δ%</th>
+                    <th style="min-width:250px">Top Pair Volumes</th>
+                </tr>
+            </thead>
+            <tbody id="currency-delta-body">
+                {% for cur in currencies %}
+                {% set pressure_class = 'pressure-heavy-buy' if 'HEAVY BUYING' in cur.pressure else
+                ('pressure-strong-buy' if 'STRONG BUYING' in cur.pressure else ('pressure-mod-buy' if 'MODERATE BUYING'
+                in cur.pressure else ('pressure-slight-buy' if 'SLIGHT BUYING' in cur.pressure else
+                ('pressure-heavy-sell' if 'HEAVY SELLING' in cur.pressure else ('pressure-strong-sell' if 'STRONG
+                SELLING' in cur.pressure else ('pressure-mod-sell' if 'MODERATE SELLING' in cur.pressure else
+                ('pressure-slight-sell' if 'SLIGHT SELLING' in cur.pressure else 'pressure-neutral'))))))) %}
+                {% set net_class = 'net-positive' if cur.netDelta > 0 else ('net-negative' if cur.netDelta < 0
+                    else 'net-zero' ) %} {% set avg_class='net-positive' if cur.avgDelta> 0 else ('net-negative' if
+                    cur.avgDelta < 0 else 'net-zero' ) %} <tr
+                        class="signal-row {{ 'has-signal' if cur.trend != 'neutral' }}"
+                        data-currency="{{ cur.currency }}">
+                        <td class="td-rank">{{ loop.index }}</td>
+                        <td class="td-symbol">
+                            <span class="currency-flag">{{ flags.get(cur.currency, '🏳️') }}</span>
+                            <span class="currency-name">{{ cur.currency }}</span>
+                        </td>
+                        <td>
+                            <span class="pressure-badge {{ pressure_class }}">
+                                {% if cur.trend == 'bullish' %}
+                                <span class="dir-arrow">▲</span>
+                                {% elif cur.trend == 'bearish' %}
+                                <span class="dir-arrow">▼</span>
+                                {% else %}
+                                <span class="dir-arrow">◆</span>
+                                {% endif %}
+                                {{ cur.pressure }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="volume-ratio-bar">
+                                <div class="ratio-buy" style="width: {{ cur.buyPercent }}%">
+                                    <span class="ratio-label">{{ cur.buyPercent }}%</span>
+                                </div>
+                                <div class="ratio-sell" style="width: {{ cur.sellPercent }}%">
+                                    <span class="ratio-label">{{ cur.sellPercent }}%</span>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="td-score score-bullish-cell">{{ cur.buyVolume | number_format | safe }}</td>
+                        <td class="td-score score-bearish-cell">{{ cur.sellVolume | number_format | safe }}</td>
+                        <td class="td-score {{ net_class }}">
+                            <strong>{{ '+' if cur.netDelta > 0 }}{{ cur.netDelta | number_format | safe }}</strong>
+                        </td>
+                        <td class="td-score {{ avg_class }}">
+                            <strong>{{ '+' if cur.avgDelta > 0 }}{{ cur.avgDelta }}%</strong>
+                        </td>
+                        <td class="td-pairs">
+                            {% for tp in cur.topPairs[:4] %}
+                            {% set tp_class = 'pair-bullish' if tp.delta > 0 else ('pair-bearish' if tp.delta < 0
+                                else 'pair-neutral' ) %} <span class="pair-chip {{ tp_class }}"
+                                title="{{ tp.symbol }} Δ={{ tp.delta }}% ({{ tp.role }})">
+                                {{ tp.symbol }}
+                                <span class="pair-dir">{{ '+' if tp.delta > 0 }}{{ tp.delta }}%</span>
+                                </span>
+                                {% else %}
+                                <span class="setup-none">—</span>
+                                {% endfor %}
+                        </td>
+                        </tr>
+                        {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== PER-PAIR VOLUME DELTA TABLE ====================== #}
+<div class="card" id="pair-delta-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">📊</span>
+            Per-Pair Volume Delta — Multi-Timeframe
+        </h2>
+        <span class="card-badge">{{ pairs|length }} PAIRS × 6 TF</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table signal-table-dense" id="pair-delta-table">
+            <thead>
+                <tr>
+                    <th class="th-symbol" rowspan="2">Pair</th>
+                    <th class="th-multi" colspan="6">DELTA %</th>
+                    <th class="th-multi" colspan="6">CUMULATIVE DELTA</th>
+                    <th style="min-width:80px" rowspan="2">Overall</th>
+                    <th style="min-width:120px" rowspan="2">Pressure</th>
+                </tr>
+                <tr class="sub-header">
+                    {% for tf in timeframes %}
+                    <th class="th-tf">{{ tf }}</th>
+                    {% endfor %}
+                    {% for tf in timeframes %}
+                    <th class="th-tf">{{ tf }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody id="pair-delta-body">
+                {% for pd in pairs %}
+                {% set has_sig = (pd.overallDelta | abs) > 10 %}
+                {% set overall_class = 'net-positive' if pd.overallDelta > 0 else ('net-negative' if pd.overallDelta < 0
+                    else 'net-zero' ) %} {% set p_class='pressure-heavy-buy' if 'HEAVY BUYING' in pd.pressure else
+                    ('pressure-strong-buy' if 'STRONG BUYING' in pd.pressure else ('pressure-mod-buy'
+                    if 'MODERATE BUYING' in pd.pressure else ('pressure-slight-buy' if 'SLIGHT BUYING' in pd.pressure
+                    else ('pressure-heavy-sell' if 'HEAVY SELLING' in pd.pressure else ('pressure-strong-sell'
+                    if 'STRONG SELLING' in pd.pressure else ('pressure-mod-sell' if 'MODERATE SELLING' in pd.pressure
+                    else ('pressure-slight-sell' if 'SLIGHT SELLING' in pd.pressure else 'pressure-neutral' ))))))) %}
+                    <tr class="signal-row {{ 'has-signal' if has_sig }}" data-symbol="{{ pd.symbol }}">
+                    <td class="td-symbol"><span class="symbol-name">{{ pd.symbol }}</span></td>
+                    {% for tf in timeframes %}
+                    {% set dp = pd.timeframes[tf].deltaPercent %}
+                    {% set dp_class = 'vd-strong-buy' if dp > 10 else ('vd-buy' if dp > 0 else ('vd-strong-sell' if dp <
+                        -10 else ('vd-sell' if dp < 0 else 'vd-neutral' ))) %} <td class="td-mini {{ dp_class }}">{{ '+'
+                        if dp > 0 }}{{ dp }}%</td>
+                        {% endfor %}
+                        {% for tf in timeframes %}
+                        {% set cd = pd.timeframes[tf].cumDelta %}
+                        {% set cd_class = 'vd-buy' if cd > 0 else ('vd-sell' if cd < 0 else 'vd-neutral' ) %} <td
+                            class="td-mini {{ cd_class }}">{{ '+' if cd > 0 }}{{ cd | number_format | safe }}</td>
+                            {% endfor %}
+                            <td class="td-score {{ overall_class }}">
+                                <strong>{{ '+' if pd.overallDelta > 0 }}{{ pd.overallDelta }}%</strong>
+                            </td>
+                            <td>
+                                <span class="pressure-badge-sm {{ p_class }}">{{ pd.pressure }}</span>
+                            </td>
+                            </tr>
+                            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== LEGEND ====================== #}
+<div class="card" id="legend-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">📖</span>
+            Volume Delta Legend
+        </h2>
+    </div>
+    <div class="card-legend">
+        <div class="legend-grid">
+            <div class="legend-section">
+                <h4>Volume Delta (Δ)</h4>
+                <div class="legend-items">
+                    <div class="legend-item"><strong>Delta %</strong> = (Buy Vol − Sell Vol) / Total Vol × 100</div>
+                    <div class="legend-item"><strong>Cumulative Delta</strong> = Running sum of deltas over time</div>
+                    <div class="legend-item"><strong>Overall</strong> = Weighted avg (M5 heaviest → D1 lightest)</div>
+                    <div class="legend-item"><strong>Net Δ</strong> = Total buy volume − total sell volume</div>
+                </div>
+            </div>
+            <div class="legend-section">
+                <h4>Pressure Levels</h4>
+                <div class="legend-items">
+                    <div class="legend-item"><span class="pressure-badge pressure-heavy-buy"
+                            style="display:inline-flex">▲ HEAVY BUYING</span> Delta &gt; +20%</div>
+                    <div class="legend-item"><span class="pressure-badge pressure-strong-buy"
+                            style="display:inline-flex">▲ STRONG BUYING</span> Delta +10~20%</div>
+                    <div class="legend-item"><span class="pressure-badge pressure-mod-buy" style="display:inline-flex">▲
+                            MODERATE BUYING</span> Delta +3~10%</div>
+                    <div class="legend-item"><span class="pressure-badge pressure-heavy-sell"
+                            style="display:inline-flex">▼ HEAVY SELLING</span> Delta &lt; -20%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'volume-delta';
+    window.apiEndpoint = '/api/volume-delta';
+</script>
+{% endblock %}
