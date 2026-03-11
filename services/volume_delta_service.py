@@ -50,7 +50,7 @@ PAIR_MAP = {
     'CADCHF': {'base': 'CAD', 'quote': 'CHF'},
 }
 
-TIMEFRAMES = ['D1', 'H4', 'H1', 'M30', 'M15', 'M5']
+TIMEFRAMES = ['D1', 'H4', 'H1', 'M30', 'M15', 'M5', 'M1']
 
 
 def _get_pressure(delta):
@@ -75,7 +75,7 @@ def _get_pressure(delta):
 
 class VolumeDeltaService:
 
-    def get_volume_delta(self):
+    def get_volume_delta(self, target_tf='default'):
         use_mt5 = mt5_service.is_connected()
         seed = int(time.time() // 300)
 
@@ -87,18 +87,21 @@ class VolumeDeltaService:
                 if use_mt5:
                     rates = mt5_service.get_rates(symbol, tf, 20)
                     if rates and len(rates) > 0:
-                        last_rate = rates[-1]
-                        total_volume = last_rate.get('tick_volume', 0) or 1
-                        # Estimate buy/sell split from candle body direction
-                        o, c, h, l = last_rate['open'], last_rate['close'], last_rate['high'], last_rate['low']
-                        full_range = h - l
-                        if full_range > 0:
-                            buy_pct = ((c - l) / full_range) * 100
-                        else:
-                            buy_pct = 50
-                        buy_pct = max(20, min(80, buy_pct))
-                        sell_pct = 100 - buy_pct
-                        buy_volume = int(total_volume * buy_pct / 100)
+                        total_volume = sum(r.get('tick_volume', 0) for r in rates) or 1
+                        buy_volume = 0
+                        sell_volume = 0
+                        
+                        for r in rates:
+                            vol = r.get('tick_volume', 0)
+                            o, c, h, l = r['open'], r['close'], r['high'], r['low']
+                            full_range = h - l
+                            if full_range > 0:
+                                b_pct = ((c - l) / full_range) * 100
+                            else:
+                                b_pct = 50
+                            b_pct = max(20, min(80, b_pct))
+                            buy_volume += int(vol * b_pct / 100)
+                        
                         sell_volume = total_volume - buy_volume
                         delta = buy_volume - sell_volume
                         delta_pct = round((delta / max(total_volume, 1)) * 100, 1)
@@ -141,7 +144,7 @@ class VolumeDeltaService:
                 }
 
             # Overall pair delta (weighted by recency)
-            weights = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5]
+            weights = [1.0, 1.5, 2.0, 2.5, 3.0, 3.5, 4.0]
             weighted_sum = 0
             total_weight = 0
             for i, tf in enumerate(TIMEFRAMES):
@@ -169,32 +172,47 @@ class VolumeDeltaService:
         for pd in pair_deltas:
             base = pd['base']
             quote = pd['quote']
-            h1 = pd['timeframes']['H1']
+
+            if target_tf != 'default' and target_tf in pd['timeframes']:
+                # Use the specific timeframe for deltaSum and volumes
+                tf_data = pd['timeframes'][target_tf]
+                tf_buy_vol = tf_data['buyVolume']
+                tf_sell_vol = tf_data['sellVolume']
+                tf_delta = tf_data['delta']
+                tf_delta_pct = tf_data['deltaPercent']
+                tf_pressure = tf_data['pressure']
+            else:
+                # Default: use H1 for volume as proxy, but overallDelta for rating
+                tf_buy_vol = pd['timeframes']['H1']['buyVolume']
+                tf_sell_vol = pd['timeframes']['H1']['sellVolume']
+                tf_delta = pd['timeframes']['H1']['delta']
+                tf_delta_pct = pd['overallDelta']
+                tf_pressure = pd['pressure']
 
             if base in currency_data:
-                currency_data[base]['buyVolume'] += h1['buyVolume']
-                currency_data[base]['sellVolume'] += h1['sellVolume']
-                currency_data[base]['delta'] += h1['delta']
+                currency_data[base]['buyVolume'] += tf_buy_vol
+                currency_data[base]['sellVolume'] += tf_sell_vol
+                currency_data[base]['delta'] += tf_delta
                 currency_data[base]['pairCount'] += 1
-                currency_data[base]['deltaSum'] += pd['overallDelta']
+                currency_data[base]['deltaSum'] += tf_delta_pct
                 currency_data[base]['pairDetails'].append({
                     'symbol': pd['symbol'],
-                    'delta': pd['overallDelta'],
+                    'delta': tf_delta_pct,
                     'role': 'base',
-                    'pressure': pd['pressure'],
+                    'pressure': tf_pressure,
                 })
 
             if quote in currency_data:
-                currency_data[quote]['buyVolume'] += h1['sellVolume']
-                currency_data[quote]['sellVolume'] += h1['buyVolume']
-                currency_data[quote]['delta'] -= h1['delta']
+                currency_data[quote]['buyVolume'] += tf_sell_vol
+                currency_data[quote]['sellVolume'] += tf_buy_vol
+                currency_data[quote]['delta'] -= tf_delta
                 currency_data[quote]['pairCount'] += 1
-                currency_data[quote]['deltaSum'] -= pd['overallDelta']
+                currency_data[quote]['deltaSum'] -= tf_delta_pct
                 currency_data[quote]['pairDetails'].append({
                     'symbol': pd['symbol'],
-                    'delta': -pd['overallDelta'],
+                    'delta': -tf_delta_pct,
                     'role': 'quote',
-                    'pressure': _get_pressure(-pd['overallDelta']),
+                    'pressure': _get_pressure(-tf_delta_pct),
                 })
 
         currencies = []
@@ -234,6 +252,7 @@ class VolumeDeltaService:
             'mostBuying': most_buying,
             'mostSelling': most_selling,
             'timeframes': TIMEFRAMES,
+            'targetTf': target_tf,
             'updatedAt': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
         }
 

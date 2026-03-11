@@ -1,0 +1,116 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Candle Volume Ranking{% endblock %}
+
+{% block content %}
+{% set flags = {'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'NZD': '🇳🇿',
+'CHF': '🇨🇭', 'XAU': '🪙'} %}
+
+<div class="dashboard-header smc-theme" id="cr-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">🏆</span>
+            Candle <span class="title-highlight">Volume Ranking</span>
+        </h1>
+        <p class="dashboard-subtitle">Currency Strength Ranked by Volume Delta of the Last Closed Candle</p>
+    </div>
+</div>
+
+<div class="cr-grid">
+    {% for tf in timeframes %}
+    <div class="card" id="cr-card-{{ tf }}">
+        <div class="card-header">
+            <h2 class="card-title">
+                <span class="card-icon">⏱️</span>
+                {{ tf }} Timeframe
+            </h2>
+            <span class="card-badge">LAST CLOSED CANDLE</span>
+        </div>
+        <div class="table-wrapper">
+            <table class="signal-table" id="cr-table-{{ tf }}">
+                <thead>
+                    <tr>
+                        <th style="width:40px">#</th>
+                        <th class="th-symbol">Currency</th>
+                        <th style="min-width:130px">Pressure</th>
+                        <th style="min-width:80px">Buy Vol</th>
+                        <th style="min-width:80px">Sell Vol</th>
+                        <th style="min-width:70px">Net Δ</th>
+                        <th style="min-width:70px">% Δ</th>
+                    </tr>
+                </thead>
+                <tbody id="cr-body-{{ tf }}">
+                    {% set currencies = rankings[tf] %}
+                    {% for cur in currencies %}
+                    {% set pressure_class = 'pressure-heavy-buy' if 'HEAVY BUYING' in cur.pressure else
+                    ('pressure-strong-buy' if 'STRONG BUYING' in cur.pressure else ('pressure-mod-buy' if 'MODERATE
+                    BUYING'
+                    in cur.pressure else ('pressure-slight-buy' if 'SLIGHT BUYING' in cur.pressure else
+                    ('pressure-heavy-sell' if 'HEAVY SELLING' in cur.pressure else ('pressure-strong-sell' if 'STRONG
+                    SELLING' in cur.pressure else ('pressure-mod-sell' if 'MODERATE SELLING' in cur.pressure else
+                    ('pressure-slight-sell' if 'SLIGHT SELLING' in cur.pressure else 'pressure-neutral'))))))) %}
+
+                    {% set net_class = 'net-positive' if cur.netDelta > 0 else ('net-negative' if cur.netDelta < 0
+                        else 'net-zero' ) %} {% set pct_class='net-positive' if cur.deltaPercent> 0 else ('net-negative'
+                        if cur.deltaPercent < 0 else 'net-zero' ) %} <tr
+                            class="signal-row {{ 'has-signal' if cur.trend != 'neutral' }}"
+                            data-currency="{{ cur.currency }}">
+                            <td class="td-rank">{{ loop.index }}</td>
+                            <td class="td-symbol">
+                                <span class="currency-flag">{{ flags.get(cur.currency, '🏳️') }}</span>
+                                <span class="currency-name">{{ cur.currency }}</span>
+                            </td>
+                            <td>
+                                <span class="pressure-badge {{ pressure_class }}">
+                                    {% if cur.trend == 'bullish' %}
+                                    <span class="dir-arrow">▲</span>
+                                    {% elif cur.trend == 'bearish' %}
+                                    <span class="dir-arrow">▼</span>
+                                    {% else %}
+                                    <span class="dir-arrow">◆</span>
+                                    {% endif %}
+                                    {{ cur.pressure }}
+                                </span>
+                            </td>
+                            <td class="td-score score-bullish-cell">{{ cur.buyVolume | number_format | safe }}</td>
+                            <td class="td-score score-bearish-cell">{{ cur.sellVolume | number_format | safe }}</td>
+                            <td class="td-score {{ net_class }}">
+                                <strong>{{ '+' if cur.netDelta > 0 }}{{ cur.netDelta | number_format | safe }}</strong>
+                            </td>
+                            <td class="td-score {{ pct_class }}">
+                                <strong>{{ '+' if cur.deltaPercent > 0 }}{{ cur.deltaPercent }}%</strong>
+                            </td>
+                            </tr>
+                            {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <div class="card-footer cr-prev-ranking" id="cr-prev-{{ tf }}"
+            style="padding: 14px 16px; border-top: 1px solid var(--border-color); font-size: 0.85rem; background: rgba(14, 18, 30, 0.3); display: flex; flex-direction: column; gap: 8px;">
+            <div
+                style="font-size: 10px; font-weight: 700; text-transform: uppercase; color: var(--text-muted); letter-spacing: 0.5px; margin-bottom: 2px;">
+                Past 5 Candles Delta</div>
+            {% for i in range(5) %}
+            <div class="prev-ranking-row"
+                style="display: flex; align-items: center; gap: 8px; overflow-x: auto; white-space: nowrap;">
+                <span class="prev-ranking-label"
+                    style="font-weight: 600; font-size: 10px; color: var(--text-secondary); min-width: 55px; background: rgba(255,255,255,0.05); padding: 3px 6px; border-radius: var(--radius-sm); text-align: center;">T-{{
+                    i + 1 }}</span>
+                <span class="prev-ranking-values" id="cr-prev-val-{{ tf }}-{{ i }}"
+                    style="color: var(--text-primary); font-family: var(--font-mono); font-size: 11px;">{{
+                    prev_rankings[tf][i] if prev_rankings[tf]|length > i else '' }}</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'candle-ranking';
+    window.apiEndpoint = '/api/candle-ranking';
+</script>
+{% endblock %}

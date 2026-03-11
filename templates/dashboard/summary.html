@@ -30,6 +30,35 @@
     </div>
 </div>
 
+{# ====================== PAIR ANALYSIS DROPDOWN ====================== #}
+<div class="card" id="pair-analysis-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🔍</span>
+            Pair Analysis
+        </h2>
+        <span class="card-badge">BBMA + SMC COMBINED</span>
+    </div>
+    <div class="pair-analysis-content">
+        <div class="pair-selector-row">
+            <label class="pair-selector-label" for="summary-pair-select">Select Pair:</label>
+            <select class="pair-select" id="summary-pair-select" onchange="window.onPairSelect(this.value, 'summary')">
+                <option value="">— Pilih Pair —</option>
+                {% for symbol in pair_list %}
+                <option value="{{ symbol }}">{{ symbol }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="analysis-panel" id="summary-analysis-panel" style="display:none;">
+            <div class="analysis-loading" id="summary-analysis-loading" style="display:none;">
+                <div class="loading-spinner"></div>
+                <span>Analyzing...</span>
+            </div>
+            <div class="analysis-result" id="summary-analysis-result"></div>
+        </div>
+    </div>
+</div>
+
 {# ====================== CURRENCY STRENGTH RANKING ====================== #}
 <div class="card" id="strength-card">
     <div class="card-header">

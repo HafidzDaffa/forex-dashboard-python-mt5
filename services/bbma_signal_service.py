@@ -58,16 +58,25 @@ def _calculate_bollinger(closes, period=20, std_dev=2):
     return upper, sma, lower
 
 
-def _calculate_ma(closes, period):
+def _calculate_sma(prices, period):
     """Simple Moving Average."""
-    if len(closes) < period:
+    if len(prices) < period:
         return None
-    return sum(closes[-period:]) / period
+    return sum(prices[-period:]) / period
+
+
+def _calculate_lwma(prices, period):
+    """Linear Weighted Moving Average."""
+    if len(prices) < period:
+        return None
+    weight_sum = period * (period + 1) / 2
+    lwma = sum(price * (i + 1) for i, price in enumerate(prices[-period:])) / weight_sum
+    return lwma
 
 
 def _detect_bbma_signal_real(rates, indicator_type):
     """
-    Detect BBMA signal from real OHLCV data.
+    Detect BBMA signal from real OHLCV data based on Oma Ally rules.
     Returns 1 (buy), -1 (sell), or 0 (no signal).
     """
     if not rates or len(rates) < 25:
@@ -76,71 +85,80 @@ def _detect_bbma_signal_real(rates, indicator_type):
     closes = [r['close'] for r in rates]
     highs = [r['high'] for r in rates]
     lows = [r['low'] for r in rates]
+    opens = [r['open'] for r in rates]
 
     upper, mid, lower = _calculate_bollinger(closes, 20, 2)
-    if upper is None:
+    prev_upper, prev_mid, prev_lower = _calculate_bollinger(closes[:-1], 20, 2)
+    if upper is None or prev_upper is None:
+        return 0
+
+    ma5_high = _calculate_lwma(highs, 5)
+    ma5_low = _calculate_lwma(lows, 5)
+    ma10_high = _calculate_lwma(highs, 10)
+    ma10_low = _calculate_lwma(lows, 10)
+
+    if not all([ma5_high, ma5_low, ma10_high, ma10_low]):
         return 0
 
     last_close = closes[-1]
     last_high = highs[-1]
     last_low = lows[-1]
+    last_open = opens[-1]
+
     prev_close = closes[-2]
+    prev_high = highs[-2]
+    prev_low = lows[-2]
 
     if indicator_type == 'extreme':
-        # Price touches/exceeds Bollinger Band
-        if last_low <= lower and last_close > lower:
-            return 1  # Buy extreme
-        if last_high >= upper and last_close < upper:
-            return -1  # Sell extreme
-        return 0
-
-    elif indicator_type == 'reentry':
-        # Price re-enters after being outside bands
-        ma5 = _calculate_ma(closes, 5)
-        ma10 = _calculate_ma(closes, 10)
-        if ma5 and ma10:
-            if ma5 > ma10 and last_close > mid and prev_close <= mid:
-                return 1
-            if ma5 < ma10 and last_close < mid and prev_close >= mid:
-                return -1
+        # Extreme Buy: Prev candle breached lower BB, current candle reverses & closes inside
+        if prev_low < prev_lower and last_close > last_open and last_close > lower:
+            return 1
+        # Extreme Sell: Prev candle breached upper BB, current candle reverses & closes inside
+        if prev_high > prev_upper and last_close < last_open and last_close < upper:
+            return -1
         return 0
 
     elif indicator_type == 'mhv':
-        # MHV — candle with high volume near MA
-        ma5 = _calculate_ma(closes, 5)
-        ma10 = _calculate_ma(closes, 10)
-        if ma5 and ma10:
-            spread = abs(last_high - last_low)
-            avg_spread = sum(abs(h - l) for h, l in zip(highs[-10:], lows[-10:])) / 10
-            if spread > avg_spread * 1.5:
-                if last_close > ma5:
-                    return 1
-                elif last_close < ma5:
-                    return -1
+        # MHV: Market Fails to continue momentum (fails to touch/break BB)
+        # Look back slightly to see if previously touched BB but now reversing
+        recent_highs = highs[-4:-1]
+        recent_lows = lows[-4:-1]
+        
+        recently_touched_upper = any(h >= prev_upper for h in recent_highs)
+        if recently_touched_upper and last_high < upper and last_close < last_open:
+            return -1  # Sell MHV
+            
+        recently_touched_lower = any(l <= prev_lower for l in recent_lows)
+        if recently_touched_lower and last_low > lower and last_close > last_open:
+            return 1  # Buy MHV
+            
         return 0
 
     elif indicator_type == 'csm':
-        # Candlestick momentum
-        body = abs(last_close - rates[-1]['open'])
-        total_range = last_high - last_low
-        if total_range > 0 and body / total_range > 0.6:
-            if last_close > rates[-1]['open']:
-                return 1
-            else:
-                return -1
+        # Candlestick Momentum (CSM): Candle closes completely outside the Bollinger Bands
+        if last_close > upper:
+            return 1  # Buy CSM
+        elif last_close < lower:
+            return -1  # Sell CSM
         return 0
 
     elif indicator_type == 'csak':
-        # CSAK — strong candle after consolidation
-        recent_ranges = [abs(highs[i] - lows[i]) for i in range(-5, -1)]
-        if recent_ranges:
-            avg_range = sum(recent_ranges) / len(recent_ranges)
-            current_range = last_high - last_low
-            if current_range > avg_range * 1.8:
-                if last_close > rates[-1]['open']:
-                    return 1
-                else:
-                    return -1
+        # Candlestick Arah Kukuh (CSAK)
+        # Strong directional candle breaking MA5, MA10, and Mid BB
+        if prev_close < mid and last_close > mid and last_close > ma5_high and last_close > ma10_high:
+            return 1
+        if prev_close > mid and last_close < mid and last_close < ma5_low and last_close < ma10_low:
+            return -1
+        return 0
+
+    elif indicator_type == 'reentry':
+        # Reentry: Price retraces back to MA5/MA10
+        # Buy Reentry happens in an uptrend (price > mid BB), retraces to MA5/MA10 low
+        if last_close > mid and last_low <= ma5_low and last_close >= ma5_low:
+            return 1
+        # Sell Reentry happens in a downtrend (price < mid BB), retraces to MA5/MA10 high
+        if last_close < mid and last_high >= ma5_high and last_close <= ma5_high:
+            return -1
         return 0
 
     return 0
@@ -204,12 +222,14 @@ class BBMASignalService:
 
             # --- Single-TF signals ---
             single_tf = {}
+            symbol_rates = {}
             for tf_idx, tf in enumerate(TIMEFRAMES):
                 tf_seed = symbol_seed + tf_idx * 17
 
                 if use_mt5:
-                    rates = mt5_service.get_rates(symbol, tf, 30)
+                    rates = mt5_service.get_rates(symbol, tf, 45)
                     if rates and len(rates) >= 25:
+                        symbol_rates[tf] = rates
                         single_tf[tf] = {
                             'extreme': _detect_bbma_signal_real(rates, 'extreme'),
                             'reentry': _detect_bbma_signal_real(rates, 'reentry'),
@@ -226,11 +246,53 @@ class BBMASignalService:
             combos = {}
             for group_name, tfs in TF_GROUPS.items():
                 g_seed = symbol_seed + crc32(group_name)
-                rem     = _simulate_combo(g_seed, 'rem')
-                ree     = _simulate_combo(g_seed + 10, 'ree')
-                rme     = _simulate_combo(g_seed + 20, 'rme')
-                zzl     = _simulate_combo(g_seed + 30, 'zzl')
-                diamond = _simulate_combo(g_seed + 40, 'diamond')
+                
+                rem, ree, rme, zzl, diamond = 0, 0, 0, 0, 0
+                
+                if use_mt5 and len(tfs) >= 3:
+                    tf1, tf2, tf3 = tfs[0], tfs[1], tfs[2]
+                    
+                    if tf1 in symbol_rates and tf2 in symbol_rates and tf3 in symbol_rates:
+                        r1 = symbol_rates[tf1]
+                        r2 = symbol_rates[tf2]
+                        r3 = symbol_rates[tf3]
+
+                        def _check_recent(r, cond, lookback):
+                            for i in range(lookback):
+                                subset = r if i == 0 else r[:-i]
+                                sig = _detect_bbma_signal_real(subset, cond)
+                                if sig != 0:
+                                    return sig
+                            return 0
+
+                        def _check_combo(cond1, cond2, cond3):
+                            sig1 = _check_recent(r1, cond1, 4) # HTF allowed last 4 candles
+                            sig2 = _check_recent(r2, cond2, 6) # MTF allowed last 6 candles
+                            sig3 = _check_recent(r3, cond3, 8) # LTF allowed last 8 candles
+                            
+                            if sig1 == 1 and sig2 == 1 and sig3 == 1:
+                                return 1
+                            if sig1 == -1 and sig2 == -1 and sig3 == -1:
+                                return -1
+                            return 0
+
+                        # REM = Reentry -> Extreme -> MHV
+                        rem = _check_combo('reentry', 'extreme', 'mhv')
+                        # REE = Reentry -> Extreme -> Extreme
+                        ree = _check_combo('reentry', 'extreme', 'extreme')
+                        # RME = Reentry -> MHV -> Extreme
+                        rme = _check_combo('reentry', 'mhv', 'extreme')
+                        # ZZL = CSM -> Reentry -> Extreme
+                        zzl = _check_combo('csm', 'reentry', 'extreme')
+                        # DIAMOND = Reentry -> Reentry -> Reentry
+                        diamond = _check_combo('reentry', 'reentry', 'reentry')
+                else:
+                    # Simulated fallback for isolated tests
+                    rem     = _simulate_combo(g_seed, 'rem')
+                    ree     = _simulate_combo(g_seed + 10, 'ree')
+                    rme     = _simulate_combo(g_seed + 20, 'rme')
+                    zzl     = _simulate_combo(g_seed + 30, 'zzl')
+                    diamond = _simulate_combo(g_seed + 40, 'diamond')
 
                 # Priority: Diamond > REM > REE > RME > ZZL
                 active_setup = None

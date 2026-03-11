@@ -1,0 +1,189 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}Candle Delta Analysis{% endblock %}
+
+{% block content %}
+<div class="dashboard-header smc-theme" id="cd-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">🕯️</span>
+            Candle <span class="title-highlight">Delta Analysis</span>
+        </h1>
+        <p class="dashboard-subtitle">Monitor volume delta on up to 100 latest candles to anticipate reversals</p>
+    </div>
+    <div class="header-stats">
+        <div class="stat-card stat-bullish">
+            <span class="stat-value" id="cd-pair">{{ symbol }}</span>
+            <span class="stat-label">Currency Pair</span>
+        </div>
+        <div class="stat-card stat-entry">
+            <span class="stat-value" id="cd-tf">{{ timeframe }}</span>
+            <span class="stat-label">Timeframe</span>
+        </div>
+        <div class="stat-card stat-bearish">
+            <span class="stat-value" id="cd-candles">{{ candles|length }}</span>
+            <span class="stat-label">Candles Loaded</span>
+        </div>
+    </div>
+</div>
+
+{# ====================== CONTROL PANEL ====================== #}
+<div class="card" id="cd-control-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">⚙️</span>
+            Analysis Parameters
+        </h2>
+    </div>
+    <div class="pair-analysis-content" style="padding: 1.5rem;">
+        <div class="param-row" style="display: flex; gap: 1rem; align-items: center;">
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label class="pair-selector-label" for="cd-pair-select">Select Pair:</label>
+                <select class="pair-select" id="cd-pair-select" style="min-width:150px">
+                    {% for p in pair_list %}
+                    <option value="{{ p }}" {% if p==symbol %}selected{% endif %}>{{ p }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                <label class="pair-selector-label" for="cd-tf-select">Timeframe:</label>
+                <select class="pair-select" id="cd-tf-select" style="min-width:120px">
+                    {% for tf in tf_list %}
+                    <option value="{{ tf }}" {% if tf==timeframe %}selected{% endif %}>{{ tf }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div style="margin-top: 20px;">
+                <button onclick="window.onApplyCandleDeltaParams()" class="brand-text"
+                    style="padding: 8px 16px; border-radius: 6px; cursor: pointer; border: 1px solid var(--border-color); background: var(--surface-bg); color: var(--text-color);">
+                    Apply & Analyze
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{# ====================== DELTA SUMMARIES (REVERSAL WATCH) ====================== #}
+<div class="card" id="cd-summary-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🔄</span>
+            Delta Accumulation (Reversal Watch)
+        </h2>
+        <span class="card-badge">LAST 5 - 100 CANDLES</span>
+    </div>
+    <div style="padding: 1rem; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1rem;">
+        {% for sum in summaries %}
+        {% set pClass = 'pressure-heavy-buy' if 'HEAVY BUYING' in sum.pressure else
+        ('pressure-strong-buy' if 'STRONG BUYING' in sum.pressure else
+        ('pressure-mod-buy' if 'MODERATE BUYING' in sum.pressure else
+        ('pressure-slight-buy' if 'SLIGHT BUYING' in sum.pressure else
+        ('pressure-heavy-sell' if 'HEAVY SELLING' in sum.pressure else
+        ('pressure-strong-sell' if 'STRONG SELLING' in sum.pressure else
+        ('pressure-mod-sell' if 'MODERATE SELLING' in sum.pressure else
+        ('pressure-slight-sell' if 'SLIGHT SELLING' in sum.pressure else 'pressure-neutral'))))))) %}
+
+        {% set sClass = 'net-positive' if sum.sumDelta > 0 else ('net-negative' if sum.sumDelta < 0 else 'net-zero' ) %}
+            <div
+            style="background: var(--bg-color); border: 1px solid var(--border-color); border-radius: 8px; padding: 1rem; text-align: center;">
+            <div
+                style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.5rem; text-transform: uppercase; font-weight: 600;">
+                Last {{ sum.candles }} Candles</div>
+            <div class="{{ sClass }}"
+                style="font-size: 1.25rem; font-weight: 700; font-family: 'JetBrains Mono', monospace; margin-bottom: 0.5rem;">
+                {{ '+' if sum.sumDelta > 0 }}{{ sum.sumDelta | number_format | safe }}
+            </div>
+            <div>
+                <span class="pressure-badge-sm {{ pClass }}" style="font-size:0.65rem; padding: 2px 6px;">{{
+                    sum.pressure }}</span>
+            </div>
+    </div>
+    {% endfor %}
+</div>
+</div>
+
+{# ====================== CANDLE DATA TABLE ====================== #}
+<div class="card" id="cd-table-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">📊</span>
+            Individual Candle Delta (Latest {{ candles|length }})
+        </h2>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table signal-table-dense">
+            <thead>
+                <tr>
+                    <th style="width:50px">No</th>
+                    <th style="min-width:140px">Time</th>
+                    <th>Close</th>
+                    <th>Total Vol</th>
+                    <th>Buy Vol</th>
+                    <th>Sell Vol</th>
+                    <th style="min-width:100px">Delta</th>
+                    <th style="min-width:140px">Visual</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for c in candles %}
+                {% set dpct = (c.delta / (c.totalVolume if c.totalVolume > 0 else 1) * 100) | round(1) %}
+                {% set isBull = c.isBullish %}
+                {% set dClass = 'vd-buy' if c.delta > 0 else ('vd-sell' if c.delta < 0 else 'vd-neutral' ) %} {% set
+                    txtClass='net-positive' if c.delta> 0 else ('net-negative' if c.delta < 0 else 'net-zero' ) %} <tr
+                        class="signal-row">
+                        <td class="td-rank">{{ loop.index }}</td>
+                        <td class="td-time">{{ c.time }}</td>
+                        <td
+                            style="font-family:'JetBrains Mono',monospace; font-size:13px; color: {{ 'var(--bullish-color)' if isBull else 'var(--bearish-color)' }}">
+                            {{ c.close }} {{ '▲' if isBull else '▼' }}
+                        </td>
+                        <td class="td-score">{{ c.totalVolume | number_format | safe }}</td>
+                        <td class="td-score score-bullish-cell" style="opacity: 0.8">{{ c.buyVolume | number_format |
+                            safe }}</td>
+                        <td class="td-score score-bearish-cell" style="opacity: 0.8">{{ c.sellVolume | number_format |
+                            safe }}</td>
+                        <td class="td-score {{ txtClass }}"><strong>{{ '+' if c.delta > 0 else '' }}{{ c.delta |
+                                number_format | safe }}</strong></td>
+                        <td style="vertical-align: middle;">
+                            <!-- simple horizontal bar representing delta -->
+                            <div
+                                style="background: rgba(255,255,255,0.05); height: 8px; width: 100%; border-radius: 4px; overflow: hidden; position: relative;">
+                                {% if c.delta > 0 %}
+                                <div
+                                    style="position:absolute; left:50%; top:0; bottom:0; width:{{ [dpct, 50]|min }}%; background:var(--bullish-color)">
+                                </div>
+                                {% elif c.delta < 0 %} <div
+                                    style="position:absolute; right:50%; top:0; bottom:0; width:{{ [dpct|abs, 50]|min }}%; background:var(--bearish-color)">
+                            </div>
+                            {% endif %}
+                            <div
+                                style="position:absolute; left:50%; top:0; bottom:0; width:1px; background:rgba(255,255,255,0.2)">
+                            </div>
+    </div>
+    </td>
+    </tr>
+    {% endfor %}
+    </tbody>
+    </table>
+</div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'candle-delta';
+
+    // Minimal script to handle UI interaction
+    window.onApplyCandleDeltaParams = function () {
+        const sym = document.getElementById('cd-pair-select').value;
+        const tf = document.getElementById('cd-tf-select').value;
+        const url = new URL(window.location.href);
+        url.searchParams.set('symbol', sym);
+        url.searchParams.set('tf', tf);
+        window.location.href = url.toString();
+    };
+</script>
+{% endblock %}

@@ -37,20 +37,33 @@
                     <span class="nav-icon">🎯</span>
                     <span>BBMA</span>
                 </a>
-                <a href="{{ url_for('smc') }}" class="nav-link {{ 'active' if request.path == '/smc' }}"
-                    id="nav-smc">
+                <a href="{{ url_for('smc') }}" class="nav-link {{ 'active' if request.path == '/smc' }}" id="nav-smc">
                     <span class="nav-icon">💎</span>
                     <span>SMC</span>
                 </a>
-                <a href="{{ url_for('summary') }}" class="nav-link {{ 'active' if request.path == '/summary' }}"
+                <!-- <a href="{{ url_for('summary') }}" class="nav-link {{ 'active' if request.path == '/summary' }}"
                     id="nav-summary">
                     <span class="nav-icon">💪</span>
                     <span>Summary</span>
-                </a>
+                </a> -->
                 <a href="{{ url_for('volume_delta') }}"
                     class="nav-link {{ 'active' if request.path == '/volume-delta' }}" id="nav-volume-delta">
                     <span class="nav-icon">📈</span>
                     <span>Vol Delta</span>
+                </a>
+                <a href="{{ url_for('candle_delta') }}"
+                    class="nav-link {{ 'active' if request.path == '/candle-delta' }}" id="nav-candle-delta">
+                    <span class="nav-icon">🕯️</span>
+                    <span>Candle Delta</span>
+                </a>
+                <a href="{{ url_for('qm') }}" class="nav-link {{ 'active' if request.path == '/qm' }}" id="nav-qm">
+                    <span class="nav-icon">⚖️</span>
+                    <span>QM Pattern</span>
+                </a>
+                <a href="{{ url_for('candle_ranking') }}"
+                    class="nav-link {{ 'active' if request.path == '/candle-ranking' }}" id="nav-candle-ranking">
+                    <span class="nav-icon">🏆</span>
+                    <span>Candle Ranking</span>
                 </a>
             </div>
             <div class="nav-status">

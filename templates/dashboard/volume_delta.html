@@ -30,6 +30,35 @@
     </div>
 </div>
 
+{# ====================== PAIR ANALYSIS DROPDOWN ====================== #}
+<div class="card" id="vd-pair-analysis-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🔍</span>
+            Pair Volume Analysis
+        </h2>
+        <span class="card-badge">AGGREGATE DELTA</span>
+    </div>
+    <div class="pair-analysis-content">
+        <div class="pair-selector-row">
+            <label class="pair-selector-label" for="vd-pair-select">Select Pair:</label>
+            <select class="pair-select" id="vd-pair-select" onchange="window.onPairSelect(this.value, 'volume')">
+                <option value="">— Pilih Pair —</option>
+                {% for symbol in pair_list %}
+                <option value="{{ symbol }}">{{ symbol }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="analysis-panel" id="vd-analysis-panel" style="display:none;">
+            <div class="analysis-loading" id="vd-analysis-loading" style="display:none;">
+                <div class="loading-spinner"></div>
+                <span>Analyzing Volume...</span>
+            </div>
+            <div class="analysis-result" id="vd-analysis-result"></div>
+        </div>
+    </div>
+</div>
+
 {# ====================== CURRENCY VOLUME DELTA RANKING ====================== #}
 <div class="card" id="currency-delta-card">
     <div class="card-header">
@@ -37,7 +66,15 @@
             <span class="card-icon">💰</span>
             Currency Volume Delta Ranking
         </h2>
-        <span class="card-badge">AGGREGATE ALL PAIRS</span>
+        <div class="card-actions">
+            <select class="tf-select" id="currency-delta-tf" onchange="window.onCurrencyTfSelect(this.value)">
+                <option value="default" {% if targetTf=='default' %}selected{% endif %}>Default</option>
+                {% for tf in timeframes %}
+                <option value="{{ tf }}" {% if targetTf==tf %}selected{% endif %}>{{ tf }}</option>
+                {% endfor %}
+            </select>
+            <span class="card-badge">AGGREGATE ALL PAIRS</span>
+        </div>
     </div>
     <div class="table-wrapper">
         <table class="signal-table" id="currency-delta-table">
@@ -128,15 +165,15 @@
             <span class="card-icon">📊</span>
             Per-Pair Volume Delta — Multi-Timeframe
         </h2>
-        <span class="card-badge">{{ pairs|length }} PAIRS × 6 TF</span>
+        <span class="card-badge">{{ pairs|length }} PAIRS × {{ timeframes|length }} TF</span>
     </div>
     <div class="table-wrapper">
         <table class="signal-table signal-table-dense" id="pair-delta-table">
             <thead>
                 <tr>
                     <th class="th-symbol" rowspan="2">Pair</th>
-                    <th class="th-multi" colspan="6">DELTA %</th>
-                    <th class="th-multi" colspan="6">CUMULATIVE DELTA</th>
+                    <th class="th-multi" colspan="{{ timeframes|length }}">DELTA %</th>
+                    <th class="th-multi" colspan="{{ timeframes|length }}">CUMULATIVE DELTA</th>
                     <th style="min-width:80px" rowspan="2">Overall</th>
                     <th style="min-width:120px" rowspan="2">Pressure</th>
                 </tr>
@@ -226,5 +263,6 @@
 <script>
     window.dashboardType = 'volume-delta';
     window.apiEndpoint = '/api/volume-delta';
+    window.currentTf = '{{ targetTf }}';
 </script>
 {% endblock %}

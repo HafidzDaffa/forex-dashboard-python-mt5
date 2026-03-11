@@ -1,0 +1,119 @@
+{% extends "layouts/base.html" %}
+
+{% block title %}QM Dashboard Signal{% endblock %}
+
+{% block content %}
+<div class="dashboard-header smc-theme" id="qm-header">
+    <div class="header-content">
+        <h1 class="dashboard-title">
+            <span class="title-icon">⚖️</span>
+            QM <span class="title-highlight">Dashboard Feature</span>
+        </h1>
+        <p class="dashboard-subtitle">Quasimodo Pattern Analysis</p>
+    </div>
+</div>
+
+{# ====================== DETAILED QM SIGNALS TABLE ====================== #}
+<div class="card" id="qm-detail-card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <span class="card-icon">🔍</span>
+            Quasimodo (QM) Signals per Timeframe
+        </h2>
+        <span class="card-badge">QM PATTERNS</span>
+    </div>
+    <div class="table-wrapper">
+        <table class="signal-table signal-table-dense" id="qm-detail-table">
+            <thead>
+                <tr>
+                    <th class="th-symbol">Symbol</th>
+                    {% for tf in timeframes %}
+                    <th class="th-tf">{{ tf }}</th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody id="qm-detail-body">
+                {% for item in signals %}
+                <tr class="signal-row" data-symbol="{{ item.symbol }}">
+                    <td class="td-symbol">
+                        <span class="symbol-name">{{ item.symbol }}</span>
+                    </td>
+                    {% for tf in timeframes %}
+                    <td class="td-signal td-mini">
+                        {{ item.signals[tf] | signal_badge | safe }}
+                    </td>
+                    {% endfor %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{# ====================== LEGEND ====================== #}
+<div class="card card-legend">
+    <div class="legend-grid">
+        <div class="legend-section">
+            <h4>QM Signals</h4>
+            <div class="legend-items">
+                <span class="legend-item"><span class="signal-badge signal-buy">B</span> QM Buy Setup</span>
+                <span class="legend-item"><span class="signal-badge signal-sell">S</span> QM Sell Setup</span>
+                <span class="legend-item"><span class="signal-badge signal-none">—</span> No QM Detected</span>
+            </div>
+            <p style="margin-top: 10px; font-size: 0.9em; opacity: 0.8;">
+                <em>Note: QM Buy detects a Low, High, Lower Low, Higher High sequence retracing to the first Low. QM
+                    Sell detects a High, Low, Higher High, Lower Low sequence retracing to the first High.</em>
+            </p>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    window.dashboardType = 'qm';
+    window.apiEndpoint = '/api/qm-signals';
+
+    // Auto refresh logic specific to QM
+    document.addEventListener('DOMContentLoaded', () => {
+        if (typeof window.startAutoRefresh === 'function') {
+            window.startAutoRefresh();
+        }
+    });
+
+    // Handle updates directly for the QM table structure
+    window.updateDashboardContent = function (data) {
+        if (!data || !data.signals) return;
+
+        const tbody = document.getElementById('qm-detail-body');
+        if (!tbody) return;
+
+        let html = '';
+        data.signals.forEach(item => {
+            html += `<tr class="signal-row" data-symbol="${item.symbol}">
+                <td class="td-symbol">
+                    <span class="symbol-name">${item.symbol}</span>
+                </td>`;
+
+            data.timeframes.forEach(tf => {
+                const signal = item.signals[tf] || 0;
+                let badge = '<span class="signal-badge signal-none">—</span>';
+                if (signal === 1) badge = '<span class="signal-badge signal-buy">B</span>';
+                if (signal === -1) badge = '<span class="signal-badge signal-sell">S</span>';
+
+                html += `<td class="td-signal td-mini">${badge}</td>`;
+            });
+
+            html += `</tr>`;
+        });
+
+        tbody.innerHTML = html;
+
+        // Update header timestamp
+        const lastUpdateEl = document.getElementById('last-update');
+        if (lastUpdateEl && data.updatedAt) {
+            lastUpdateEl.textContent = `Updated: ${data.updatedAt}`;
+        }
+    };
+</script>
+{% endblock %}

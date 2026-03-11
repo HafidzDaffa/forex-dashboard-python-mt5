@@ -26,8 +26,14 @@
     }
 
     function refreshSignals() {
-        const endpoint = window.apiEndpoint;
+        let endpoint = window.apiEndpoint;
         if (!endpoint) return;
+
+        // Append tf parameter if it exists (for volume delta)
+        if (window.currentTf && window.currentTf !== 'default') {
+            const separator = endpoint.includes('?') ? '&' : '?';
+            endpoint += `${separator}tf=${window.currentTf}`;
+        }
 
         const indicator = document.getElementById('refresh-indicator');
         if (indicator) indicator.classList.add('refreshing');
@@ -90,6 +96,8 @@
             updateSummaryDashboard(data);
         } else if (window.dashboardType === 'volume-delta') {
             updateVolumeDeltaDashboard(data);
+        } else if (window.dashboardType === 'candle-ranking') {
+            updateCandleRankingDashboard(data);
         }
         updateStats();
     }
@@ -367,7 +375,7 @@
 
         const pairBody = document.getElementById('pair-delta-body');
         if (pairBody && data.pairs) {
-            const tfs = data.timeframes || ['D1', 'H4', 'H1', 'M30', 'M15', 'M5'];
+            const tfs = data.timeframes || ['D1', 'H4', 'H1', 'M30', 'M15', 'M5', 'M1'];
             let html = '';
             data.pairs.forEach(pd => {
                 const hasSig = Math.abs(pd.overallDelta) > 10;
@@ -409,6 +417,56 @@
         if (pressure.includes('MODERATE SELLING')) return 'pressure-mod-sell';
         if (pressure.includes('SLIGHT SELLING')) return 'pressure-slight-sell';
         return 'pressure-neutral';
+    }
+
+    // ======================== CANDLE RANKING ========================
+
+    function updateCandleRankingDashboard(data) {
+        const flags = { 'USD': '🇺🇸', 'EUR': '🇪🇺', 'GBP': '🇬🇧', 'JPY': '🇯🇵', 'AUD': '🇦🇺', 'CAD': '🇨🇦', 'NZD': '🇳🇿', 'CHF': '🇨🇭', 'XAU': '🪙' };
+
+        if (!data.timeframes || !data.rankings) return;
+
+        data.timeframes.forEach(tf => {
+            const tbody = document.getElementById(`cr-body-${tf}`);
+            if (tbody) {
+                let html = '';
+                const currencies = data.rankings[tf] || [];
+                currencies.forEach((cur, idx) => {
+                    const pClass = getPressureClass(cur.pressure);
+                    const netClass = cur.netDelta > 0 ? 'net-positive' : (cur.netDelta < 0 ? 'net-negative' : 'net-zero');
+                    const arrow = cur.trend === 'bullish' ? '▲' : (cur.trend === 'bearish' ? '▼' : '◆');
+                    const flag = flags[cur.currency] || '🏳️';
+
+                    html += `<tr class="signal-row ${cur.trend !== 'neutral' ? 'has-signal' : ''}">`;
+                    html += `<td class="td-rank">${idx + 1}</td>`;
+                    html += `<td class="td-symbol"><span class="currency-flag">${flag}</span><span class="currency-name">${cur.currency}</span></td>`;
+                    html += `<td><span class="pressure-badge ${pClass}"><span class="dir-arrow">${arrow}</span> ${cur.pressure}</span></td>`;
+                    html += `<td class="td-score score-bullish-cell">${cur.buyVolume.toLocaleString()}</td>`;
+                    html += `<td class="td-score score-bearish-cell">${cur.sellVolume.toLocaleString()}</td>`;
+                    html += `<td class="td-score ${netClass}"><strong>${cur.netDelta > 0 ? '+' : ''}${cur.netDelta.toLocaleString()}</strong></td>`;
+
+                    const pctClass = cur.deltaPercent > 0 ? 'net-positive' : (cur.deltaPercent < 0 ? 'net-negative' : 'net-zero');
+                    html += `<td class="td-score ${pctClass}"><strong>${cur.deltaPercent > 0 ? '+' : ''}${cur.deltaPercent}%</strong></td>`;
+                    html += `</tr>`;
+                });
+                tbody.innerHTML = html;
+            }
+
+            const prevEl = document.getElementById(`cr-prev-${tf}`);
+            if (prevEl && data.prev_rankings && data.prev_rankings[tf]) {
+                // Now prev_rankings[tf] is an array of 5 strings
+                for (let i = 0; i < 5; i++) {
+                    const spanEl = document.getElementById(`cr-prev-val-${tf}-${i}`);
+                    if (spanEl && data.prev_rankings[tf].length > i) {
+                        spanEl.textContent = data.prev_rankings[tf][i];
+                    } else if (spanEl) {
+                        spanEl.textContent = '';
+                    }
+                }
+            }
+        });
+
+        if (data.updatedAt) updateLastUpdateTime(data.updatedAt);
     }
 
     function updateBBMAStats() {
@@ -500,5 +558,108 @@
             el.textContent = 'Updated: ' + timeStr;
         }
     }
+
+    // ======================== PAIR ANALYSIS ========================
+
+    window.onPairSelect = function (symbol, source) {
+        const panelId = source === 'summary' ? 'summary-analysis-panel' : 'vd-analysis-panel';
+        const resultId = source === 'summary' ? 'summary-analysis-result' : 'vd-analysis-result';
+        const loadingId = source === 'summary' ? 'summary-analysis-loading' : 'vd-analysis-loading';
+
+        const panel = document.getElementById(panelId);
+        const result = document.getElementById(resultId);
+        const loading = document.getElementById(loadingId);
+
+        if (!symbol) {
+            if (panel) panel.style.display = 'none';
+            return;
+        }
+
+        if (panel) panel.style.display = 'block';
+        if (loading) loading.style.display = 'flex';
+        if (result) result.innerHTML = '';
+
+        fetch(`/api/pair-analysis/${symbol}?source=${source}`)
+            .then(res => res.json())
+            .then(data => {
+                if (loading) loading.style.display = 'none';
+                renderAnalysisPanel(data, resultId);
+            })
+            .catch(err => {
+                console.error('Error fetching pair analysis:', err);
+                if (loading) loading.style.display = 'none';
+                if (result) result.innerHTML = `<div style="color:red;text-align:center;">Error loading analysis for ${symbol}</div>`;
+            });
+    };
+
+    function renderAnalysisPanel(data, containerId) {
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        const isBuy = data.verdictKey.includes('buy');
+        const isSell = data.verdictKey.includes('sell');
+        const verdictClass = isBuy ? 'verdict-buying' : (isSell ? 'verdict-selling' : 'verdict-neutral');
+        const mainScore = isBuy ? data.buyPercent : (isSell ? data.sellPercent : Math.max(data.buyPercent, data.sellPercent));
+        const colorClass = isBuy ? 'score-buy' : (isSell ? 'score-sell' : '');
+
+        let breakdownHtml = '';
+
+        // Map backend keys to CSS classes
+        const classMap = {
+            'strong_buying': 'fill-strong-buy',
+            'moderate_buying': 'fill-mod-buy',
+            'slight_buying': 'fill-slight-buy',
+            'neutral': 'fill-neutral',
+            'slight_selling': 'fill-slight-sell',
+            'moderate_selling': 'fill-mod-sell',
+            'strong_selling': 'fill-strong-sell'
+        };
+
+        data.breakdown.forEach(item => {
+            const fillClass = classMap[item.key] || 'fill-neutral';
+            // Only dim 0% bars
+            const opacity = item.score === 0 ? 'opacity: 0.2;' : '';
+
+            breakdownHtml += `
+            <div class="breakdown-row" style="${opacity}">
+                <div class="breakdown-label">${item.label}</div>
+                <div class="breakdown-bar-wrap">
+                    <div class="breakdown-fill ${fillClass}" style="width: ${item.score}%"></div>
+                </div>
+                <div class="breakdown-pct">${item.score}%</div>
+            </div>`;
+        });
+
+        container.innerHTML = `
+            <div class="analysis-grid">
+                <div class="verdict-box">
+                    <div class="verdict-title">Overall Verdict</div>
+                    <div class="verdict-badge ${verdictClass}">${data.verdict}</div>
+                    <div class="verdict-score ${colorClass}">${mainScore}%</div>
+                    <div style="font-size: 10px; color: var(--text-muted); margin-top: 8px;">Confidence Score</div>
+                </div>
+                <div class="breakdown-box">
+                    ${breakdownHtml}
+                </div>
+            </div>
+        `;
+    }
+
+    // ======================== CURRENCY DELTA TIMEFRAME ========================
+
+    window.onCurrencyTfSelect = function (tf) {
+        window.currentTf = tf;
+
+        // Update URL query parameter without full reload if possible,
+        // but for a clean state we can just redirect or reload with the new param
+        const url = new URL(window.location.href);
+        if (tf === 'default') {
+            url.searchParams.delete('tf');
+        } else {
+            url.searchParams.set('tf', tf);
+        }
+
+        window.location.href = url.toString();
+    };
 
 })();
