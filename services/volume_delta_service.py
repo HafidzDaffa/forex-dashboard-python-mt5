@@ -71,6 +71,75 @@ def _get_pressure(delta):
     if delta < 0:
         return 'SLIGHT SELLING'
     return 'NEUTRAL'
+def aggregate_m1_volumes(symbol, target_rates):
+    """
+    Given a list of target timeframe candles, fetch the M1 candles
+    that span their timeframe and calculate true buy/sell volume delta.
+    """
+    if not mt5_service.is_connected() or not target_rates:
+        return target_rates
+
+    start_time = target_rates[0]['time']
+    end_time = int(time.time()) + 86400
+
+    m1_rates = mt5_service.get_rates_range(symbol, 'M1', start_time, end_time)
+    if not m1_rates:
+        # Fallback to estimating from target timeframe
+        for i in range(len(target_rates)):
+            vol = target_rates[i].get('tick_volume', 0)
+            o, c, h, l = target_rates[i]['open'], target_rates[i]['close'], target_rates[i]['high'], target_rates[i]['low']
+            full_range = h - l
+            b_pct = ((c - l) / full_range * 100) if full_range > 0 else 50
+            b_pct = max(20, min(80, b_pct))
+            b_vol = int(vol * b_pct / 100)
+            target_rates[i]['agg_buy_volume'] = b_vol
+            target_rates[i]['agg_sell_volume'] = max(0, vol - b_vol)
+            target_rates[i]['agg_total_volume'] = vol
+        return target_rates
+
+    m1_idx = 0
+    m1_len = len(m1_rates)
+
+    for i in range(len(target_rates)):
+        curr_time = target_rates[i]['time']
+        next_time = target_rates[i+1]['time'] if i + 1 < len(target_rates) else end_time
+        
+        buy_vol, sell_vol, total_vol = 0, 0, 0
+        
+        while m1_idx < m1_len and m1_rates[m1_idx]['time'] < curr_time:
+            m1_idx += 1
+            
+        while m1_idx < m1_len and m1_rates[m1_idx]['time'] < next_time:
+            r = m1_rates[m1_idx]
+            vol = r.get('tick_volume', 0)
+            o, c, h, l = r['open'], r['close'], r['high'], r['low']
+            full_range = h - l
+            b_pct = ((c - l) / full_range * 100) if full_range > 0 else 50
+            b_pct = max(20, min(80, b_pct))
+            b_vol = int(vol * b_pct / 100)
+            s_vol = max(0, vol - b_vol)
+            
+            buy_vol += b_vol
+            sell_vol += s_vol
+            total_vol += vol
+            m1_idx += 1
+            
+        if total_vol > 0:
+            target_rates[i]['agg_buy_volume'] = buy_vol
+            target_rates[i]['agg_sell_volume'] = sell_vol
+            target_rates[i]['agg_total_volume'] = total_vol
+        else:
+            vol = target_rates[i].get('tick_volume', 0)
+            o, c, h, l = target_rates[i]['open'], target_rates[i]['close'], target_rates[i]['high'], target_rates[i]['low']
+            full_range = h - l
+            b_pct = ((c - l) / full_range * 100) if full_range > 0 else 50
+            b_pct = max(20, min(80, b_pct))
+            b_vol = int(vol * b_pct / 100)
+            target_rates[i]['agg_buy_volume'] = b_vol
+            target_rates[i]['agg_sell_volume'] = max(0, vol - b_vol)
+            target_rates[i]['agg_total_volume'] = vol
+
+    return target_rates
 
 
 class VolumeDeltaService:
@@ -87,22 +156,12 @@ class VolumeDeltaService:
                 if use_mt5:
                     rates = mt5_service.get_rates(symbol, tf, 20)
                     if rates and len(rates) > 0:
-                        total_volume = sum(r.get('tick_volume', 0) for r in rates) or 1
-                        buy_volume = 0
-                        sell_volume = 0
+                        rates = aggregate_m1_volumes(symbol, rates)
                         
-                        for r in rates:
-                            vol = r.get('tick_volume', 0)
-                            o, c, h, l = r['open'], r['close'], r['high'], r['low']
-                            full_range = h - l
-                            if full_range > 0:
-                                b_pct = ((c - l) / full_range) * 100
-                            else:
-                                b_pct = 50
-                            b_pct = max(20, min(80, b_pct))
-                            buy_volume += int(vol * b_pct / 100)
+                        total_volume = sum(r.get('agg_total_volume', 0) for r in rates) or 1
+                        buy_volume = sum(r.get('agg_buy_volume', 0) for r in rates)
+                        sell_volume = sum(r.get('agg_sell_volume', 0) for r in rates)
                         
-                        sell_volume = total_volume - buy_volume
                         delta = buy_volume - sell_volume
                         delta_pct = round((delta / max(total_volume, 1)) * 100, 1)
                         cum_delta = self._generate_cum_delta_real(rates)
@@ -258,12 +317,15 @@ class VolumeDeltaService:
 
     @staticmethod
     def _generate_cum_delta_real(rates):
-        """Calculate cumulative delta from tick volumes and candle direction."""
+        """Calculate cumulative delta from actual volume deltas."""
         cum = 0
         for r in rates:
-            vol = r.get('tick_volume', 0)
-            if r['close'] >= r['open']:
-                cum += vol
+            if 'agg_buy_volume' in r:
+                cum += (r['agg_buy_volume'] - r['agg_sell_volume'])
             else:
-                cum -= vol
+                vol = r.get('tick_volume', 0)
+                if r['close'] >= r['open']:
+                    cum += vol
+                else:
+                    cum -= vol
         return cum

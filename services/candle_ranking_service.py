@@ -10,7 +10,7 @@ from datetime import datetime
 from zlib import crc32 as _crc32
 
 from services.mt5_data_service import mt5_service
-from services.volume_delta_service import PAIR_MAP, CURRENCIES, _get_pressure
+from services.volume_delta_service import PAIR_MAP, CURRENCIES, _get_pressure, aggregate_m1_volumes
 
 def crc32(s):
     return _crc32(s.encode('utf-8')) & 0xFFFFFFFF
@@ -55,19 +55,26 @@ class CandleRankingService:
                     # Fetch 7 candles to get the last closed (-2) and previous 1-5 closed (-3 to -7)
                     rates = mt5_service.get_rates(symbol, tf, 7)
                     if rates and len(rates) >= 2:
+                        rates = aggregate_m1_volumes(symbol, rates)
+
                         # Last closed candle
                         r = rates[-2]
-                        vol = r.get('tick_volume', 0)
-                        o, c, h, l = r['open'], r['close'], r['high'], r['low']
-                        full_range = h - l
-                        if full_range > 0:
-                            b_pct = ((c - l) / full_range) * 100
-                        else:
-                            b_pct = 50
-                        b_pct = max(20, min(80, b_pct))
+                        vol = r.get('agg_total_volume', r.get('tick_volume', 0))
+                        tf_buy_vol = r.get('agg_buy_volume')
+                        tf_sell_vol = r.get('agg_sell_volume')
+
+                        if tf_buy_vol is None:
+                            o, c, h, l = r['open'], r['close'], r['high'], r['low']
+                            full_range = h - l
+                            if full_range > 0:
+                                b_pct = ((c - l) / full_range) * 100
+                            else:
+                                b_pct = 50
+                            b_pct = max(20, min(80, b_pct))
+                            
+                            tf_buy_vol = int(vol * b_pct / 100)
+                            tf_sell_vol = max(0, vol - tf_buy_vol)
                         
-                        tf_buy_vol = int(vol * b_pct / 100)
-                        tf_sell_vol = max(0, vol - tf_buy_vol)
                         tf_delta = tf_buy_vol - tf_sell_vol
 
                         # Previous 1 to 5 closed candles
@@ -75,17 +82,22 @@ class CandleRankingService:
                             idx = -3 - i
                             if len(rates) >= abs(idx):
                                 pr = rates[idx]
-                                p_vol = pr.get('tick_volume', 0)
-                                p_o, p_c, p_h, p_l = pr['open'], pr['close'], pr['high'], pr['low']
-                                p_full_range = p_h - p_l
-                                if p_full_range > 0:
-                                    p_b_pct = ((p_c - p_l) / p_full_range) * 100
-                                else:
-                                    p_b_pct = 50
-                                p_b_pct = max(20, min(80, p_b_pct))
+                                p_vol = pr.get('agg_total_volume', pr.get('tick_volume', 0))
+                                prev_buy_vol = pr.get('agg_buy_volume')
+                                prev_sell_vol = pr.get('agg_sell_volume')
+
+                                if prev_buy_vol is None:
+                                    p_o, p_c, p_h, p_l = pr['open'], pr['close'], pr['high'], pr['low']
+                                    p_full_range = p_h - p_l
+                                    if p_full_range > 0:
+                                        p_b_pct = ((p_c - p_l) / p_full_range) * 100
+                                    else:
+                                        p_b_pct = 50
+                                    p_b_pct = max(20, min(80, p_b_pct))
+                                    
+                                    prev_buy_vol = int(p_vol * p_b_pct / 100)
+                                    prev_sell_vol = max(0, p_vol - prev_buy_vol)
                                 
-                                prev_buy_vol = int(p_vol * p_b_pct / 100)
-                                prev_sell_vol = max(0, p_vol - prev_buy_vol)
                                 prev_delta = prev_buy_vol - prev_sell_vol
                                 
                                 prev_vols[i]['buyVolume'] = prev_buy_vol

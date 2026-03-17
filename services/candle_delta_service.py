@@ -11,7 +11,7 @@ from datetime import datetime
 from zlib import crc32 as _crc32
 
 from services.mt5_data_service import mt5_service
-from services.volume_delta_service import PAIR_MAP, TIMEFRAMES, _get_pressure
+from services.volume_delta_service import PAIR_MAP, TIMEFRAMES, _get_pressure, aggregate_m1_volumes
 
 def crc32(s):
     return _crc32(s.encode('utf-8')) & 0xFFFFFFFF
@@ -33,18 +33,20 @@ class CandleDeltaService:
         if use_mt5:
             rates = mt5_service.get_rates(symbol, tf, count)
             if rates and len(rates) > 0:
+                rates = aggregate_m1_volumes(symbol, rates)
                 for r in rates:
-                    vol = r.get('tick_volume', 0)
-                    o, c, h, l = r['open'], r['close'], r['high'], r['low']
-                    full_range = h - l
-                    if full_range > 0:
-                        b_pct = ((c - l) / full_range) * 100
-                    else:
-                        b_pct = 50
-                    b_pct = max(20, min(80, b_pct))
+                    vol = r.get('agg_total_volume', r.get('tick_volume', 0))
+                    buy_volume = r.get('agg_buy_volume')
+                    sell_volume = r.get('agg_sell_volume')
+
+                    if buy_volume is None:
+                        o, c, h, l = r['open'], r['close'], r['high'], r['low']
+                        full_range = h - l
+                        b_pct = ((c - l) / full_range * 100) if full_range > 0 else 50
+                        b_pct = max(20, min(80, b_pct))
+                        buy_volume = int(vol * b_pct / 100)
+                        sell_volume = max(0, vol - buy_volume)
                     
-                    buy_volume = int(vol * b_pct / 100)
-                    sell_volume = max(0, vol - buy_volume)
                     delta = buy_volume - sell_volume
                     
                     # Store time as string for frontend
@@ -52,15 +54,15 @@ class CandleDeltaService:
                     
                     candles.append({
                         'time': t_str,
-                        'open': o,
-                        'high': h,
-                        'low': l,
-                        'close': c,
+                        'open': r['open'],
+                        'high': r['high'],
+                        'low': r['low'],
+                        'close': r['close'],
                         'totalVolume': vol,
                         'buyVolume': buy_volume,
                         'sellVolume': sell_volume,
                         'delta': delta,
-                        'isBullish': c >= o
+                        'isBullish': r['close'] >= r['open']
                     })
 
         # If MT5 fails or is not connected, use simulation

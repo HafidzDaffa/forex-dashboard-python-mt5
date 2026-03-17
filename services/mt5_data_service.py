@@ -148,6 +148,38 @@ class MT5DataService:
             logger.error(f"Error fetching rates for {symbol}/{timeframe}: {e}")
             return None
 
+    def get_rates_range(self, symbol, timeframe, start_time, end_time):
+        """
+        Fetch OHLCV rates from MT5 between start_time and end_time.
+        """
+        if not self.is_connected():
+            return None
+
+        tf = TIMEFRAME_MT5.get(timeframe)
+        if tf is None:
+            return None
+
+        try:
+            rates = mt5.copy_rates_range(symbol, tf, start_time, end_time)
+            if rates is None or len(rates) == 0:
+                return None
+
+            result = []
+            for r in rates:
+                result.append({
+                    'time': int(r['time']),
+                    'open': float(r['open']),
+                    'high': float(r['high']),
+                    'low': float(r['low']),
+                    'close': float(r['close']),
+                    'tick_volume': int(r['tick_volume']),
+                    'real_volume': int(r['real_volume']) if 'real_volume' in r.dtype.names else 0,
+                })
+            return result
+        except Exception as e:
+            logger.error(f"Error fetching rates range for {symbol}/{timeframe}: {e}")
+            return None
+
     def get_tick(self, symbol):
         """
         Get the latest tick for a symbol.
