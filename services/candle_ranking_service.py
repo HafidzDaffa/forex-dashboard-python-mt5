@@ -10,7 +10,7 @@ from datetime import datetime
 from zlib import crc32 as _crc32
 
 from services.mt5_data_service import mt5_service
-from services.volume_delta_service import PAIR_MAP, CURRENCIES, _get_pressure, aggregate_m1_volumes
+from services.volume_delta_service import PAIR_MAP, CURRENCIES, _get_pressure, calculate_volumes_from_ohlc
 
 def crc32(s):
     return _crc32(s.encode('utf-8')) & 0xFFFFFFFF
@@ -32,7 +32,12 @@ class CandleRankingService:
         for tf in self.target_timeframes:
             # Initialize currency data for this timeframe
             currency_data = {
-                cur: {'buyVolume': 0, 'sellVolume': 0, 'delta': 0}
+                cur: {
+                    'buyVolume': 0, 
+                    'sellVolume': 0, 
+                    'delta': 0,
+                    'pairDetails': []
+                }
                 for cur in CURRENCIES
             }
             # List of 5 past currency data
@@ -55,7 +60,7 @@ class CandleRankingService:
                     # Fetch 7 candles to get the last closed (-2) and previous 1-5 closed (-3 to -7)
                     rates = mt5_service.get_rates(symbol, tf, 7)
                     if rates and len(rates) >= 2:
-                        rates = aggregate_m1_volumes(symbol, rates)
+                        rates = calculate_volumes_from_ohlc(rates)
 
                         # Last closed candle
                         r = rates[-2]
@@ -76,6 +81,8 @@ class CandleRankingService:
                             tf_sell_vol = max(0, vol - tf_buy_vol)
                         
                         tf_delta = tf_buy_vol - tf_sell_vol
+                        tf_vol = tf_buy_vol + tf_sell_vol
+                        tf_delta_pct = round((tf_delta / max(tf_vol, 1)) * 100, 1)
 
                         # Previous 1 to 5 closed candles
                         for i in range(5):
@@ -119,6 +126,8 @@ class CandleRankingService:
                     tf_buy_vol = int(total_volume * buy_pct / 100)
                     tf_sell_vol = total_volume - tf_buy_vol
                     tf_delta = tf_buy_vol - tf_sell_vol
+                    tf_vol = tf_buy_vol + tf_sell_vol
+                    tf_delta_pct = round((tf_delta / max(tf_vol, 1)) * 100, 1)
                     
                     # Simulation fallback for previous candles
                     for i in range(5):
@@ -134,17 +143,25 @@ class CandleRankingService:
                         prev_vols[i]['sellVolume'] = p_sell_vol
                         prev_vols[i]['delta'] = p_delta
 
-                # Aggregate to base currency
                 if base in currency_data:
                     currency_data[base]['buyVolume'] += tf_buy_vol
                     currency_data[base]['sellVolume'] += tf_sell_vol
                     currency_data[base]['delta'] += tf_delta
+                    currency_data[base]['pairDetails'].append({
+                        'symbol': symbol,
+                        'delta': tf_delta_pct,
+                        'role': 'base'
+                    })
 
-                # Aggregate to quote currency
                 if quote in currency_data:
                     currency_data[quote]['buyVolume'] += tf_sell_vol
                     currency_data[quote]['sellVolume'] += tf_buy_vol
                     currency_data[quote]['delta'] -= tf_delta
+                    currency_data[quote]['pairDetails'].append({
+                        'symbol': symbol,
+                        'delta': -tf_delta_pct,
+                        'role': 'quote'
+                    })
 
                 # Aggregate previous to base and quote currency
                 for i in range(5):
@@ -169,6 +186,9 @@ class CandleRankingService:
                 # (Can be negative if sell volume > buy volume)
                 delta_percent = round((net_delta / max(total_vol, 1)) * 100, 1)
                 
+                # Sort pairs by absolute delta strength
+                details = sorted(cd['pairDetails'], key=lambda x: abs(x['delta']), reverse=True)
+                
                 currencies_list.append({
                     'currency': cur,
                     'buyVolume': cd['buyVolume'],
@@ -177,7 +197,8 @@ class CandleRankingService:
                     'netDelta': net_delta,
                     'deltaPercent': delta_percent,
                     'pressure': _get_pressure(delta_percent),
-                    'trend': 'bullish' if delta_percent > 0 else ('bearish' if delta_percent < 0 else 'neutral')
+                    'trend': 'bullish' if delta_percent > 0 else ('bearish' if delta_percent < 0 else 'neutral'),
+                    'pairDetails': details
                 })
 
             # Sort by delta (strongest first)

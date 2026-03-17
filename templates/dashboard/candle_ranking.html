@@ -37,6 +37,7 @@
                         <th style="min-width:80px">Sell Vol</th>
                         <th style="min-width:70px">Net Δ</th>
                         <th style="min-width:70px">% Δ</th>
+                        <th style="min-width:300px">Pairs</th>
                     </tr>
                 </thead>
                 <tbody id="cr-body-{{ tf }}">
@@ -79,6 +80,16 @@
                             </td>
                             <td class="td-score {{ pct_class }}">
                                 <strong>{{ '+' if cur.deltaPercent > 0 }}{{ cur.deltaPercent }}%</strong>
+                            </td>
+                            <td class="td-pairs">
+                                {% if cur.pairDetails %}
+                                    {% for tp in cur.pairDetails %}
+                                        {% set tpC = 'pair-bullish' if tp.delta > 0 else ('pair-bearish' if tp.delta < 0 else 'pair-neutral') %}
+                                        <span class="pair-chip {{ tpC }}">{{ tp.symbol }} <span class="pair-dir">{{ '+' if tp.delta > 0 }}{{ tp.delta }}%</span></span>
+                                    {% endfor %}
+                                {% else %}
+                                    <span class="setup-none">—</span>
+                                {% endif %}
                             </td>
                             </tr>
                             {% endfor %}

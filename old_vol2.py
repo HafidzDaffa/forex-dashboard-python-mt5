@@ -1,6 +1,6 @@
-"""
+﻿"""
 Volume Delta Service
-Port of VolumeDeltaService.php — generates volume delta analysis
+Port of VolumeDeltaService.php ΓÇö generates volume delta analysis
 per pair and per currency with MT5 or simulation fallback.
 """
 
@@ -71,28 +71,6 @@ def _get_pressure(delta):
     if delta < 0:
         return 'SLIGHT SELLING'
     return 'NEUTRAL'
-def calculate_volumes_from_ohlc(target_rates):
-    """
-    Given a list of target timeframe candles, estimate buy/sell volume delta
-    based on the candle's price action (OHLC) instead of M1 aggregation.
-    """
-    if not target_rates:
-        return target_rates
-
-    for i in range(len(target_rates)):
-        vol = target_rates[i].get('tick_volume', 0)
-        o, c, h, l = target_rates[i]['open'], target_rates[i]['close'], target_rates[i]['high'], target_rates[i]['low']
-        full_range = h - l
-        b_pct = ((c - l) / full_range * 100) if full_range > 0 else 50
-        b_pct = max(20, min(80, b_pct))
-        b_vol = int(vol * b_pct / 100)
-        
-        target_rates[i]['agg_buy_volume'] = b_vol
-        target_rates[i]['agg_sell_volume'] = max(0, vol - b_vol)
-        target_rates[i]['agg_total_volume'] = vol
-
-    return target_rates
-
 def aggregate_m1_volumes(symbol, target_rates):
     """
     Given a list of target timeframe candles, fetch the M1 candles
@@ -178,7 +156,7 @@ class VolumeDeltaService:
                 if use_mt5:
                     rates = mt5_service.get_rates(symbol, tf, 20)
                     if rates and len(rates) > 0:
-                        rates = calculate_volumes_from_ohlc(rates)
+                        rates = aggregate_m1_volumes(symbol, rates)
                         
                         total_volume = sum(r.get('agg_total_volume', 0) for r in rates) or 1
                         buy_volume = sum(r.get('agg_buy_volume', 0) for r in rates)

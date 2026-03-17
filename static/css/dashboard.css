@@ -1167,19 +1167,23 @@ body {
 /* ---- Pair Chips ---- */
 .td-pairs {
     text-align: left !important;
-    padding-left: 8px !important;
+    padding: 8px 16px !important;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+    max-width: 600px;
 }
 
 .pair-chip {
     display: inline-flex;
     align-items: center;
     gap: 3px;
-    padding: 2px 6px;
-    border-radius: 3px;
-    font-size: 9px;
+    padding: 3px 8px;
+    border-radius: 4px;
+    font-size: 10px;
     font-family: var(--font-mono);
     font-weight: 500;
-    margin: 1px 2px;
     white-space: nowrap;
 }
 

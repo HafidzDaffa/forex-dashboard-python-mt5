@@ -447,7 +447,17 @@
 
                     const pctClass = cur.deltaPercent > 0 ? 'net-positive' : (cur.deltaPercent < 0 ? 'net-negative' : 'net-zero');
                     html += `<td class="td-score ${pctClass}"><strong>${cur.deltaPercent > 0 ? '+' : ''}${cur.deltaPercent}%</strong></td>`;
-                    html += `</tr>`;
+                    
+                    html += `<td class="td-pairs">`;
+                    if (cur.pairDetails && cur.pairDetails.length) {
+                        cur.pairDetails.forEach(tp => {
+                            const tpC = tp.delta > 0 ? 'pair-bullish' : (tp.delta < 0 ? 'pair-bearish' : 'pair-neutral');
+                            html += `<span class="pair-chip ${tpC}">${tp.symbol} <span class="pair-dir">${tp.delta > 0 ? '+' : ''}${tp.delta}%</span></span>`;
+                        });
+                    } else {
+                        html += `<span class="setup-none">—</span>`;
+                    }
+                    html += `</td></tr>`;
                 });
                 tbody.innerHTML = html;
             }
